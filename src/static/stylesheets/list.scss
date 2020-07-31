@@ -1,0 +1,126 @@
+@import "~elv-components-js/src/stylesheets/styles";
+
+$selected-color: lighten($elv-color-mediumblue, 10%);
+
+.list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  margin-top: $elv-spacing-s;
+  overflow-y: auto;
+}
+
+.list-entry {
+  display: grid;
+
+  &.list-entry-selectable {
+    cursor: pointer;
+  }
+
+  & > div {
+    @include elv-ellipsis;
+
+    border: 1px solid $elv-color-lightgray;
+    border-bottom: 0;
+    border-right: 0;
+    padding: $elv-spacing-xs;
+
+    &:last-child {
+      border-right: 1px solid $elv-color-lightgray;
+    }
+
+    svg {
+      height: $elv-font-xxl;
+    }
+  }
+
+  &:last-child {
+    border-bottom: 1px solid $elv-color-lightgray;
+  }
+
+  &.even {
+    background-color: $elv-color-lightestgray;
+  }
+
+  &.selected {
+    background-color: $selected-color;
+    color: $elv-color-white;
+
+    svg {
+      stroke: $elv-color-white;
+    }
+  }
+
+  &:not(.list-header) {
+    &:hover {
+      background-color: $elv-color-lightergray;
+
+      &.selected {
+        background-color: $selected-color;
+      }
+    }
+  }
+
+  .list-entry-icon-cell {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+
+    & + div {
+      border-left: 0;
+    }
+  }
+
+  .date-field {
+    font-size: $elv-font-l;
+  }
+}
+
+.sortable-header {
+  @include elv-no-select;
+  cursor: pointer;
+
+  &.active {
+    &.asc {
+      &::after {
+        content: " ▲";
+        font-size: $elv-font-m;
+      }
+    }
+
+    &.desc {
+      &::after {
+        content: " ▼";
+        font-size: $elv-font-m;
+      }
+    }
+  }
+}
+
+.titles-list-entry {
+  grid-template-columns: 2fr 1fr 1fr;
+}
+
+.assets-list-entry {
+  grid-template-columns: $elv-spacing-ml 2fr 1fr 1fr;
+}
+
+.assets-list-entry-with-permissions {
+  grid-template-columns: $elv-spacing-ml 1fr 1fr 1fr 1fr 1fr 1fr;
+}
+
+.offerings-list-entry {
+  grid-template-columns: 2fr 2fr 1fr 1fr;
+}
+
+.title-profile-list-entry {
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+
+  &:not(.list-header) {
+    &:hover {
+      background-color: inherit;
+    }
+  }
+}

@@ -1,0 +1,14 @@
+.idea/
+
+**.DS_STORE
+
+node_modules/
+
+/configuration.js
+
+/dist
+
+deploy.sh
+
+scratch/
+!.keep
