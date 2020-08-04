@@ -3,7 +3,10 @@ import {Action, Modal} from "elv-components-js";
 import ContentBrowser from "./ContentBrowser";
 import {inject, observer} from "mobx-react";
 import UrlJoin from "url-join";
-import {Link} from "react-router-dom";
+import {Link, Redirect} from "react-router-dom";
+import {BackButton, ChangeSort, SortableHeader} from "./Misc";
+import Path from "path";
+import AsyncComponent from "./AsyncComponent";
 
 @inject("rootStore")
 @observer
@@ -12,69 +15,106 @@ class Titles extends React.Component {
     super(props);
 
     this.state = {
-      modal: null,
-      previews: {}
+      filter: "",
+      sortKey: "title",
+      sortAsc: true,
     };
 
+    this.Content = this.Content.bind(this);
     this.AddTitle = this.AddTitle.bind(this);
     this.CloseModal = this.CloseModal.bind(this);
     this.ActivateModal = this.ActivateModal.bind(this);
+
+    this.SortableHeader = SortableHeader.bind(this);
+    this.ChangeSort = ChangeSort.bind(this);
+  }
+
+  Group() {
+    if(!this.props.match.params.groupAddress) { return; }
+
+    return this.props.rootStore.allGroups[this.props.match.params.groupAddress];
   }
 
   TitleList() {
     return (
       <div className="list titles-list">
         <div className="list-entry titles-list-entry list-header titles-list-header">
-          <div>Title</div>
-          <div>Group Permissions</div>
-          <div>User Permissions</div>
+          { this.SortableHeader("title", "Title")}
         </div>
-
         {
-          this.props.rootStore.titles.map((title, index) =>
-            <Link
-              key={`title-entry-${title.objectId}`}
-              to={UrlJoin(this.props.location.pathname, title.objectId)}
-              className={`list-entry titles-list-entry ${index % 2 === 0 ? "even" : "odd"}`}
-            >
-              <div>{ title.title }</div>
-              <div>0</div>
-              <div>0</div>
-            </Link>
-          )
+          ( this.Group() ? this.props.rootStore.groupTitles(this.Group().address) : this.props.rootStore.titles )
+            .filter(({title}) => !this.state.filter || (title.toLowerCase().includes(this.state.filter.toLowerCase())))
+            .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
+            .map((title, index) =>
+              <Link
+                key={`title-entry-${title.objectId}`}
+                to={UrlJoin(this.props.location.pathname, title.objectId)}
+                className={`list-entry titles-list-entry ${index % 2 === 0 ? "even" : "odd"}`}
+              >
+                <div>{ title.title }</div>
+              </Link>
+            )
         }
       </div>
     );
   }
 
-  render() {
+  Content() {
+    const group = this.Group();
     return (
-      <div className="list-container titles">
+      <div className="page-container titles">
         { this.state.modal }
         <header>
-          <h1>All Titles</h1>
+          { group ? <BackButton to={Path.dirname(this.props.location.pathname)} /> : null }
+          <h1>{ group ? `${group.name} | Title Permissions` : "All Titles"}</h1>
         </header>
 
-        <Action onClick={this.ActivateModal}>Add Title</Action>
+        <div className="controls">
+          <Action onClick={this.ActivateModal}>Add Title</Action>
+          <input className="filter" name="filter" value={this.state.filter} onChange={event => this.setState({filter: event.target.value})} placeholder="Filter Titles..."/>
+        </div>
 
         { this.TitleList() }
       </div>
     );
   }
 
+  render() {
+    return (
+      <AsyncComponent
+        Load={async () => {
+          if(this.props.match.params.groupAddress && !this.Group()){
+            await this.props.rootStore.LoadGroups();
+
+            await Promise.all(
+              this.props.rootStore.groupTitleIds(this.props.match.params.groupAddress).map(objectId =>
+                this.props.rootStore.AddTitle({objectId})
+              )
+            );
+          }
+        }}
+        render={this.Content}
+      />
+    );
+  }
+
 
   /* Content Browser */
 
-  AddTitle(args) {
-    this.props.rootStore.AddTitle(args);
+  async AddTitle(args) {
+    await this.props.rootStore.AddTitle(args);
     this.CloseModal();
+
+    this.setState({
+      modal: <Redirect to={UrlJoin(this.props.location.pathname, args.objectId)} />
+    });
   }
 
   ActivateModal() {
     this.setState({
       modal: (
         <Modal
-          className="asset-form-modal"
+          className="asset-form-modal fullscreen-modal"
           closable={true}
           OnClickOutside={this.CloseModal}
         >

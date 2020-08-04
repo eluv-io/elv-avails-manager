@@ -1,32 +1,28 @@
 .permission-profile {
-  button {
-    height: 2rem;
-    min-width: 5rem;
+  h3 {
+    margin: $elv-spacing-s 0;
   }
 
+  .offering-default-permission,
   .asset-default-permission {
     grid-template-columns: 15rem 1fr;
     margin: $elv-spacing-s 0;
   }
 
-  .actions {
-    display: flex;
-
-    button {
-      margin-right: $elv-spacing-xs;
-    }
+  .selected-form {
+    border: 1px solid $elv-color-lightgray;
+    margin: $elv-spacing-m 0;
+    padding: $elv-spacing-m $elv-spacing-l $elv-spacing-s;
   }
 
-  .asset-profile-selected-asset-form {
-    margin: $elv-spacing-l;
-  }
-
-  .asset-selection-modal,
-  .asset-profile-selected-asset-form {
+  .title-permission-modal,
+  .offering-selection-modal,
+  .selected-form,
+  .asset-selection-modal {
     h3 {
       font-size: $elv-font-xl;
       font-weight: 500;
-      margin-bottom: $elv-spacing-s;
+      margin: 0 0 $elv-spacing-s;
     }
 
     input,
@@ -35,8 +31,12 @@
       min-width: 20rem;
     }
 
-    button {
-      margin-top: $elv-spacing-s;
+    .-elv-input {
+      grid-template-columns: 15rem 1fr;
+    }
+
+    .controls {
+      margin-top: $elv-spacing-m;
     }
   }
 }

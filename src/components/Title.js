@@ -3,10 +3,13 @@ import Path from "path";
 import {inject, observer} from "mobx-react";
 import {BackButton} from "./Misc";
 import AsyncComponent from "./AsyncComponent";
-import {Action, LabelledField, Tabs} from "elv-components-js";
+import {Action, LabelledField, Tabs, Modal} from "elv-components-js";
+
 import AppFrame from "./AppFrame";
-import TitleProfile from "./TitleProfile";
+import TitlePermission from "./permissions/TitlePermission";
 import AssetList from "./AssetList";
+import OfferingList from "./OfferingList";
+import Groups from "./Groups";
 
 @inject("rootStore")
 @observer
@@ -21,7 +24,17 @@ class Title extends React.Component {
       sortAsc: true
     };
 
+    this.AddGroupPermission = this.AddGroupPermission.bind(this);
+    this.CloseModal = this.CloseModal.bind(this);
+    this.ActivateModal = this.ActivateModal.bind(this);
+
     this.Content = this.Content.bind(this);
+  }
+
+  Group() {
+    if(!this.props.match.params.groupAddress) { return; }
+
+    return this.props.rootStore.allGroups[this.props.match.params.groupAddress];
   }
 
   Title() {
@@ -43,7 +56,10 @@ class Title extends React.Component {
 
     return (
       <div className="title-preview">
-        { toggleButton }
+        <div className="controls">
+          { toggleButton }
+        </div>
+
         {
           this.state.showPreview ?
             <AppFrame
@@ -74,54 +90,54 @@ class Title extends React.Component {
     );
   }
 
-  Offerings() {
-    const offerings = this.Title().metadata.offerings || {};
-
+  Profiles() {
     return (
-      <div className="list offerings-list">
-        <div className="list-entry offerings-list-entry list-header offerings-list-header">
-          <div>Offering</div>
-          <div>Playout Formats</div>
-          <div>Simple Watermark</div>
-          <div>Image Watermark</div>
+      <div className="list title-profile-list">
+        <div className="list-entry list-header title-profile-list-entry title-profile-list-header">
+          <div>Profile</div>
+          <div>Title Access</div>
+          <div>Assets</div>
+          <div>Offerings</div>
+          <div>Start Time</div>
+          <div>End Time</div>
         </div>
-
         {
-          Object.keys(offerings).sort().map((offeringKey, index) => {
-            const offering = offerings[offeringKey];
-            const formats = Object.keys(offering.playout.playout_formats || {}).join(", ");
-
-            return (
-              <div
-                key={`offering-entry-${offeringKey}`}
-                className={`list-entry offerings-list-entry ${index % 2 === 0 ? "even" : "odd"}`}
-              >
-                <div>{ offeringKey }</div>
-                <div title={formats}>{ formats }</div>
-                <div title={offering.simple_watermark ? JSON.stringify(offering.simple_watermark || {}, null, 2) : null}>
-                  { offering.simple_watermark ? "✓" : null }
-                </div>
-                <div title={offering.image_watermark ? JSON.stringify(offering.image_watermark || {}, null, 2) : null}>
-                  { offering.image_watermark ? "✓" : null }
-                </div>
-              </div>
-            );
-          })}
+          this.props.rootStore.profiles.map((profile, index) =>
+            <TitlePermission
+              key={`title-profile-${this.Title().objectId}-${profile}`}
+              objectId={this.Title().objectId}
+              profile={profile}
+              index={index}
+            />
+          )
+        }
       </div>
     );
   }
 
-  Profiles() {
+  Permissions() {
     return (
-      <div className="title-profiles">
+      <div className="list title-profile-list">
         {
-          this.props.rootStore.profiles.map(profile =>
-            <TitleProfile
-              key={`title-profile-${this.Title().objectId}-${profile}`}
-              objectId={this.Title().objectId}
-              profile={profile}
-            />
-          )
+          this.Group() ? null :
+            <div className="controls">
+              <Action onClick={this.ActivateModal}>Add Group Permission</Action>
+            </div>
+        }
+        <div className="list-entry list-header title-profile-list-entry title-profile-list-header">
+          <div>Access Group</div>
+          <div>Title Access</div>
+          <div>Assets</div>
+          <div>Offerings</div>
+          <div>Start Time</div>
+          <div>End Time</div>
+        </div>
+        {
+          this.Group() ?
+            <TitlePermission objectId={this.Title().objectId} /> :
+            Object.keys(this.props.rootStore.titlePermissions[this.Title().objectId] || {}).map((address, index) =>
+              <TitlePermission key={`title-permission-${address}`} objectId={this.Title().objectId} groupAddress={address} index={index} />
+            )
         }
       </div>
     );
@@ -130,6 +146,9 @@ class Title extends React.Component {
   Content() {
     let content;
     switch (this.state.tab) {
+      case "permissions":
+        content = this.Permissions();
+        break;
       case "profiles":
         content = this.Profiles();
         break;
@@ -140,23 +159,26 @@ class Title extends React.Component {
         content = <AssetList assets={this.Title().assets} baseUrl={this.Title().baseUrl} />;
         break;
       case "offerings":
-        content = this.Offerings();
+        content = <OfferingList offerings={this.Title().offerings} />;
         break;
       default:
         content = null;
     }
 
+    const group = this.Group();
+
     return (
       <div className="page-container">
+        { this.state.modal }
         <header>
           <BackButton to={Path.dirname(this.props.location.pathname)} />
-          <h1>{ this.Title().title }</h1>
+          <h1>{ group ? `${group.name} | ${this.Title().title} | Title Permissions` : this.Title().title }</h1>
         </header>
 
         <Tabs
           selected={this.state.tab}
           onChange={tab => this.setState({tab, showPreview: false})}
-          options={[["Access Profiles", "profiles"], ["Title", "title"], ["Assets", "assets"], ["Offerings", "offerings"]]}
+          options={[["Permissions", "permissions"], ["Access Profiles", "profiles"], ["Title", "title"], ["Assets", "assets"], ["Offerings", "offerings"]]}
         />
 
         { content }
@@ -168,6 +190,14 @@ class Title extends React.Component {
     return (
       <AsyncComponent
         Load={async () => {
+          if(this.props.match.params.groupAddress){
+            this.props.rootStore.InitializeGroupTitlePermission(this.props.match.params.groupAddress, this.props.match.params.objectId);
+
+            if(!this.Group()) {
+              await this.props.rootStore.LoadGroups();
+            }
+          }
+
           if(this.Title() && this.Title().metadata.assets) { return; }
 
           await this.props.rootStore.LoadFullTitle({objectId: this.props.match.params.objectId});
@@ -175,6 +205,32 @@ class Title extends React.Component {
         render={this.Content}
       />
     );
+  }
+
+  /* Group Selection */
+
+  AddGroupPermission(groupAddress) {
+    this.props.rootStore.InitializeGroupTitlePermission(groupAddress, this.Title().objectId);
+
+    this.CloseModal();
+  }
+
+  ActivateModal() {
+    this.setState({
+      modal: (
+        <Modal
+          className="title-permission-modal fullscreen-modal"
+          closable={true}
+          OnClickOutside={this.CloseModal}
+        >
+          <Groups selectable onSelect={this.AddGroupPermission} />
+        </Modal>
+      )
+    });
+  }
+
+  CloseModal() {
+    this.setState({modal: null});
   }
 }
 

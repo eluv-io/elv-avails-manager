@@ -1,13 +1,14 @@
 import {DateTime} from "luxon";
 
 import React from "react";
-import {ImageIcon, PreviewIcon} from "elv-components-js";
+import {Action, ImageIcon, PreviewIcon} from "elv-components-js";
 import PropTypes from "prop-types";
 import UrlJoin from "url-join";
 import PictureIcon from "../static/icons/image.svg";
 import FileIcon from "../static/icons/file.svg";
 import {Link, withRouter} from "react-router-dom";
 import PrettyBytes from "pretty-bytes";
+import {ChangeSort, SortableHeader} from "./Misc";
 
 @withRouter
 class AssetList extends React.Component {
@@ -15,6 +16,7 @@ class AssetList extends React.Component {
     super(props);
 
     this.state = {
+      filter: "",
       show: false,
       sortKey: "attachment_file_name",
       sortAsc: true,
@@ -23,6 +25,9 @@ class AssetList extends React.Component {
 
     this.AssetEntry = this.AssetEntry.bind(this);
     this.SelectAsset = this.SelectAsset.bind(this);
+
+    this.SortableHeader = SortableHeader.bind(this);
+    this.ChangeSort = ChangeSort.bind(this);
   }
 
   SelectAsset(asset) {
@@ -102,41 +107,49 @@ class AssetList extends React.Component {
   }
 
   render() {
-    const ChangeSort = (key) => {
-      if(this.state.sortKey === key) {
-        this.setState({sortAsc: !this.state.sortAsc});
-      } else {
-        this.setState({sortKey: key, sortAsc: true});
-      }
-    };
-
-    const SortableHeader = (key, label) =>
-      <div
-        onClick={() => ChangeSort(key)}
-        className={`sortable-header ${key === this.state.sortKey ? "active" : ""} ${this.state.sortAsc ? "asc" : "desc"}`}
-      >
-        { label }
-      </div>;
-
-
     const assets = this.props.assets
       .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1));
 
-    return (
-      <div className="list assets-list">
-        <div className={`list-entry assets-list-entry list-header assets-list-header ${this.props.withPermissions ? "assets-list-entry-with-permissions" : ""}`}>
-          <div className="list-entry-icon-cell"/>
-          { SortableHeader("attachment_file_name", "Asset") }
-          { SortableHeader("asset_type", "Type") }
-          { SortableHeader("attachment_file_size", "Size") }
-          { this.props.withPermissions ? SortableHeader("permission", "Permission") : null }
-          { this.props.withPermissions ? SortableHeader("startTime", "Start Time") : null }
-          { this.props.withPermissions ? SortableHeader("endTime", "End Time") : null }
-        </div>
+    const SelectAll = () => {
+      this.setState({
+        selected: this.props.assets
+      }, () => this.props.onSelect(this.state.selected));
+    };
 
-        {
-          assets.map(this.AssetEntry)
-        }
+    const Clear = () => {
+      this.setState({
+        selected: []
+      }, () => this.props.onSelect(this.state.selected));
+    };
+
+    return (
+      <div className="assets-list">
+        <div className="controls">
+          { this.props.actions }
+          { this.props.assets.length > 0 ? <Action className="secondary" onClick={SelectAll}>Select All</Action> : null }
+          { this.state.selected.length > 0 ? <Action className="secondary" onClick={Clear}>Clear Selected</Action> : null }
+          <input className="filter" name="filter" value={this.state.filter} onChange={event => this.setState({filter: event.target.value})} placeholder="Filter Assets..."/>
+        </div>
+        <div className="list">
+          <div className={`list-entry assets-list-entry list-header assets-list-header ${this.props.withPermissions ? "assets-list-entry-with-permissions" : ""}`}>
+            <div className="list-entry-icon-cell"/>
+            { this.SortableHeader("attachment_file_name", "Asset") }
+            { this.SortableHeader("asset_type", "Type") }
+            { this.SortableHeader("attachment_file_size", "Size") }
+            { this.props.withPermissions ? this.SortableHeader("permission", "Permission") : null }
+            { this.props.withPermissions ? this.SortableHeader("startTime", "Start Time") : null }
+            { this.props.withPermissions ? this.SortableHeader("endTime", "End Time") : null }
+          </div>
+          {
+            assets
+              .filter(({attachment_file_name, asset_type}) =>
+                !this.state.filter ||
+                ((attachment_file_name || "").toLowerCase().includes(this.state.filter.toLowerCase())
+                  || (asset_type || "").toLowerCase().includes(this.state.filter.toLowerCase()))
+              )
+              .map(this.AssetEntry)
+          }
+        </div>
       </div>
     );
   }
@@ -148,7 +161,11 @@ AssetList.propTypes = {
   selectable: PropTypes.bool,
   onSelect: PropTypes.func,
   backPath: PropTypes.string,
-  withPermissions: PropTypes.bool
+  withPermissions: PropTypes.bool,
+  actions: PropTypes.oneOfType(
+    PropTypes.array,
+    PropTypes.node
+  )
 };
 
 export default AssetList;

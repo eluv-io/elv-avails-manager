@@ -6,12 +6,16 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  margin-top: $elv-spacing-s;
   overflow-y: auto;
 }
 
 .list-entry {
   display: grid;
+  position: relative;
+
+  .permission-profile + & {
+    margin-top: $elv-spacing-m;
+  }
 
   &.list-entry-selectable {
     cursor: pointer;
@@ -19,11 +23,19 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 
   & > div {
     @include elv-ellipsis;
-
+    align-items: center;
     border: 1px solid $elv-color-lightgray;
     border-bottom: 0;
     border-right: 0;
+
+    display: flex;
+    height: 3rem;
+    min-width: 0;
     padding: $elv-spacing-xs;
+
+    span {
+      @include elv-ellipsis;
+    }
 
     &:last-child {
       border-right: 1px solid $elv-color-lightgray;
@@ -52,11 +64,13 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
   }
 
   &:not(.list-header) {
-    &:hover {
-      background-color: $elv-color-lightergray;
+    &:not(.title-profile-list-entry) {
+      &:hover {
+        background-color: $elv-color-lightergray;
 
-      &.selected {
-        background-color: $selected-color;
+        &.selected {
+          background-color: $selected-color;
+        }
       }
     }
   }
@@ -74,7 +88,32 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
   }
 
   .date-field {
-    font-size: $elv-font-l;
+    font-size: $elv-font-m;
+  }
+
+  select {
+    background-color: $elv-color-white;
+  }
+
+  .-elv-date-input {
+    flex: 1 1 auto;
+    margin: 0;
+
+    input {
+      width: 100%;
+    }
+  }
+
+  // Stacking context prevents datepicker from sitting above list - make it relative to the list entry instead
+  .rdt {
+    position: inherit;
+
+    // sass-lint:disable class-name-format
+    &.rdtOpen {
+      .rdtPicker {
+        top: 3rem;
+      }
+    }
   }
 }
 
@@ -85,22 +124,24 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
   &.active {
     &.asc {
       &::after {
-        content: " ▲";
+        content: "▲";
         font-size: $elv-font-m;
+        padding-left: $elv-spacing-xs;
       }
     }
 
     &.desc {
       &::after {
-        content: " ▼";
+        content: "▼";
         font-size: $elv-font-m;
+        padding-left: $elv-spacing-xs;
       }
     }
   }
 }
 
 .titles-list-entry {
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 1fr;
 }
 
 .assets-list-entry {
@@ -115,12 +156,14 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
   grid-template-columns: 2fr 2fr 1fr 1fr;
 }
 
+.offerings-list-entry-with-permissions {
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+}
+
 .title-profile-list-entry {
   grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+}
 
-  &:not(.list-header) {
-    &:hover {
-      background-color: inherit;
-    }
-  }
+.groups-list-entry {
+  grid-template-columns: 1fr 1fr;
 }

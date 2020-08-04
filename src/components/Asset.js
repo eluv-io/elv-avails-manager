@@ -31,7 +31,7 @@ class Asset extends React.Component {
       <div>
         <header>
           <BackButton to={backPath} />
-          <h1>{ this.Title().title } - { this.Asset().attachment_file_name }</h1>
+          <h1>{ this.Title().title } | { this.Asset().attachment_file_name }</h1>
         </header>
 
         <div className="asset-info">

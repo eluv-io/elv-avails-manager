@@ -20,7 +20,7 @@ class ContentStore {
 
   @action.bound
   LoadLibraries = flow(function * () {
-    if(Object.keys(this.libraries).length > 0) { return; }
+    if(this.libraries.length > 0) { return; }
 
     const libraryIds = yield this.rootStore.client.ContentLibraries();
 

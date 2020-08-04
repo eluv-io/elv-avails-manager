@@ -17,57 +17,33 @@ class RootStore {
     "special-partners"
   ];
 
+  // Profile permissions
   @observable titleProfiles = {};
 
-  @observable allTitles = {
-    "iq__31pCbDS1fCHErd1nrCx2uHe5SHZE": {
-      "libraryId": "ilib3691LecDh9yNyqKHpwXtmej8kS4v",
-      "objectId": "iq__31pCbDS1fCHErd1nrCx2uHe5SHZE",
-      "title": "21 Jump Street",
-      "metadata": {
-        "public": {
-          "asset_metadata": {
-            "display_title": "21 Jump Street",
-            "title": "21 Jump Street"
-          },
-          "name": "21JUMPST - 21 Jump Street Mezzanine"
-        }
-      }
-    },
-    "iq__3F1F2bucfGaFraL3zAgUaBXsSCh2": {
-      "libraryId": "ilib3691LecDh9yNyqKHpwXtmej8kS4v",
-      "objectId": "iq__3F1F2bucfGaFraL3zAgUaBXsSCh2",
-      "title": "8 Heads In A Duffel Bag",
-      "metadata": {
-        "public": {
-          "asset_metadata": {
-            "display_title": "8 Heads In A Duffel Bag",
-            "title": "8 Heads In A Duffel Bag"
-          },
-          "name": "EIGHTHEA - 8 Heads In A Duffel Bag Mezzanine"
-        }
-      }
-    },
-    "iq__3F2aJD1xNzz72zsaAF4PzVKh9s9y": {
-      "libraryId": "ilib3691LecDh9yNyqKHpwXtmej8kS4v",
-      "objectId": "iq__3F2aJD1xNzz72zsaAF4PzVKh9s9y",
-      "title": "Black Caesar",
-      "metadata": {
-        "public": {
-          "asset_metadata": {
-            "display_title": "Black Caesar",
-            "title": "Black Caesar"
-          },
-          "name": "BLACKCAE MEZ - Black Caesar"
-        }
-      }
-    }
-  };
+  // User/Group permissions
+  @observable titlePermissions = {};
+
+  @observable allTitles = {};
+  @observable allGroups = {};
 
   @computed get titles() {
     return Object.values(this.allTitles)
       .sort((a, b) => a.title < b.title ? -1 : 1);
   }
+
+  groupTitleIds = (groupAddress) => {
+    return Object.keys(this.titlePermissions || {})
+      .filter(objectId => this.titlePermissions[objectId][groupAddress]);
+  };
+
+  groupTitles = (groupAddress) => {
+    const groupTitleIds = new Set(this.groupTitleIds(groupAddress));
+    return Object.values(this.allTitles)
+      .filter(title => groupTitleIds.has(title.objectId))
+      .sort((a, b) => a.title < b.title ? -1 : 1);
+  };
+
+
 
   SafeTraverse = (object, path) => {
     let keys = path.split("/");
@@ -142,6 +118,22 @@ class RootStore {
     if(metadata.assets) {
       Object.keys(metadata.assets).forEach(key => metadata.assets[key].assetKey = key);
       this.allTitles[objectId].assets = Object.values(metadata.assets);
+    } else {
+      this.allTitles[objectId].assets = [];
+    }
+
+    if(metadata.offerings) {
+      this.allTitles[objectId].offerings = Object.keys(metadata.offerings).map(offeringKey => {
+        const offering = metadata.offerings[offeringKey];
+        return {
+          offeringKey,
+          playoutFormats: offering.playout ? Object.keys(offering.playout.playout_formats || {}).join(", ") : "",
+          simpleWatermark: offering.simple_watermark,
+          imageWatermark: offering.image_watermark
+        };
+      });
+    } else {
+      this.allTitles[objectId].offerings = [];
     }
 
     this.allTitles[objectId].metadata = {
@@ -187,6 +179,67 @@ class RootStore {
   @action.bound
   SetTitleProfileAccess(objectId, profile, key, value) {
     this.titleProfiles[objectId][profile][key] = value;
+  }
+
+  @action.bound
+  SetTitlePermissionAccess(objectId, address, key, value) {
+    this.titlePermissions[objectId][address][key] = value;
+  }
+
+  @action.bound
+  LoadGroups = flow(function * () {
+    // Check if groups already loaded
+    if(Object.keys(this.allGroups).length > 0) { return; }
+
+    const groupAddresses = (yield this.client.Collection({collectionType: "accessGroups"}))
+    // TODO: Remove
+      .sort((a, b) => a < b ? -1 : 1)
+      .slice(0, 20);
+
+    let groupInfo = {};
+    yield this.client.utils.LimitedMap(
+      10,
+      groupAddresses,
+      async address => {
+        address = this.client.utils.FormatAddress(address);
+        const metadata = await this.client.ContentObjectMetadata({
+          libraryId: (await this.client.ContentSpaceId()).replace(/^ispc/, "ilib"),
+          objectId: this.client.utils.AddressToObjectId(address),
+          metadataSubtree: "public",
+          select: [
+            "name",
+            "description"
+          ]
+        });
+
+        groupInfo[address] = {
+          address,
+          name: metadata.name || address,
+          description: metadata.description || ""
+        };
+      }
+    );
+
+    this.allGroups = groupInfo;
+  });
+
+  @action.bound
+  InitializeGroupTitlePermission(groupAddress, objectId) {
+    if(!this.titlePermissions[objectId]) {
+      this.titlePermissions[objectId] = {};
+    }
+
+    if(!this.titlePermissions[objectId][groupAddress]) {
+      this.titlePermissions[objectId][groupAddress] = {
+        title: "default",
+        assets: "default",
+        offerings: "default",
+        assetsDefault: "no-access",
+        offeringsDefault: "no-access",
+        assetPermissions: [],
+        offeringPermissions: []
+      };
+    }
   }
 
   constructor() {

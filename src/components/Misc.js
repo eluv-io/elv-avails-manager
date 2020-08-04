@@ -12,3 +12,21 @@ export const BackButton = ({to}) => (
   </Link>
 );
 
+export const SortableHeader = function(key, label) {
+  return (
+    <div
+      onClick={() => this.ChangeSort(key)}
+      className={`sortable-header ${key === this.state.sortKey ? "active" : ""} ${this.state.sortAsc ? "asc" : "desc"}`}
+    >
+      {label}
+    </div>
+  );
+};
+
+export const ChangeSort = function(key) {
+  if(this.state.sortKey === key) {
+    this.setState({sortAsc: !this.state.sortAsc});
+  } else {
+    this.setState({sortKey: key, sortAsc: true});
+  }
+};
