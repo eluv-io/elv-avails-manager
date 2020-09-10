@@ -66,6 +66,7 @@ class TitleProfile extends React.Component {
     return (
       <React.Fragment>
         <select
+          disabled={this.props.profile === "default"}
           value={value}
           onChange={event => this.Update(key, event.target.value)}
         >
