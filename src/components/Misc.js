@@ -30,3 +30,23 @@ export const ChangeSort = function(key) {
     this.setState({sortKey: key, sortAsc: true});
   }
 };
+
+export const EffectiveAvailability = (startTimes, endTimes) => {
+  const effectiveStartTime = Math.max(...startTimes.filter(t => t));
+  const effectiveEndTime = Math.min(...endTimes.filter(t => t));
+
+  let effectivePeriod = "Unlimited";
+  if(isFinite(effectiveStartTime) || isFinite(effectiveEndTime)) {
+    if(effectiveEndTime < effectiveStartTime) {
+      effectivePeriod = "None";
+    } else {
+      effectivePeriod = `
+                    ${isFinite(effectiveStartTime) ? new Date(effectiveStartTime).toISOString().substring(0, 10) : ""}
+                    -
+                    ${isFinite(effectiveEndTime) ? new Date(effectiveEndTime).toISOString().substring(0, 10) : ""}
+                  `;
+    }
+  }
+
+  return effectivePeriod;
+};

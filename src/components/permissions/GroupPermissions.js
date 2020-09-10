@@ -5,7 +5,7 @@ import PropTypes from "prop-types";
 import {Link} from "react-router-dom";
 import UrlJoin from "url-join";
 
-import {ChangeSort, SortableHeader} from "../Misc";
+import {ChangeSort, EffectiveAvailability, SortableHeader} from "../Misc";
 import {DateSelection, ImageIcon} from "elv-components-js";
 import LinkIcon from "../../static/icons/link.svg";
 
@@ -16,7 +16,6 @@ class GroupPermissions extends React.Component {
     super(props);
 
     this.state = {
-      filter: "",
       sortKey: "name",
       sortAsc: true,
     };
@@ -36,28 +35,31 @@ class GroupPermissions extends React.Component {
           { this.SortableHeader("profile", "Availability Profile") }
           { this.SortableHeader("startTime", "Start Time") }
           { this.SortableHeader("endTime", "End Time") }
+          <div>Availability</div>
         </div>
         {
           titles
             .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
-            .map((title, index) => {
-              const Update = (key, value) => this.props.rootStore.SetTitlePermissionAccess(title.objectId, this.props.groupAddress, key, value);
+            .filter(title => !this.props.filter || title.name.toLowerCase().includes(this.props.filter))
+            .map((titlePermission, index) => {
+              const Update = (key, value) => this.props.rootStore.SetTitlePermissionAccess(titlePermission.objectId, this.props.groupAddress, key, value);
+              const profile = this.props.rootStore.titleProfiles[titlePermission.objectId][titlePermission.profile];
 
               return (
                 <div className={`list-entry title-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${this.props.groupAddress}`}>
-                  <div>
-                    <Link to={UrlJoin("/titles", title.objectId)}>
+                  <div className="small-font">
+                    <Link to={UrlJoin("/titles", titlePermission.objectId)}>
                       <ImageIcon icon={LinkIcon} />
                     </Link>
-                    { title.name }
+                    { titlePermission.name }
                   </div>
                   <div>
                     <select
-                      value={title.profile}
+                      value={titlePermission.profile}
                       onChange={event => Update("profile", event.target.value)}
                     >
                       {
-                        Object.keys(this.props.rootStore.titleProfiles[title.objectId]).map(profile =>
+                        Object.keys(this.props.rootStore.titleProfiles[titlePermission.objectId]).map(profile =>
                           <option key={`profile-${profile}`} value={profile}>{ profile }</option>
                         )
                       }
@@ -67,7 +69,7 @@ class GroupPermissions extends React.Component {
                     <DateSelection
                       readOnly
                       noLabel
-                      value={title.startTime}
+                      value={titlePermission.startTime}
                       onChange={dateTime => Update("startTime", dateTime)}
                     />
                   </div>
@@ -75,9 +77,12 @@ class GroupPermissions extends React.Component {
                     <DateSelection
                       readOnly
                       noLabel
-                      value={title.endTime}
+                      value={titlePermission.endTime}
                       onChange={dateTime => Update("endTime", dateTime)}
                     />
+                  </div>
+                  <div className="small-font">
+                    { EffectiveAvailability([profile.startTime, titlePermission.startTime], [profile.endTime, titlePermission.endTime])}
                   </div>
                 </div>
               );
@@ -98,7 +103,8 @@ class GroupPermissions extends React.Component {
 }
 
 GroupPermissions.propTypes = {
-  groupAddress: PropTypes.string.isRequired
+  groupAddress: PropTypes.string.isRequired,
+  filter: PropTypes.string
 };
 
 export default GroupPermissions;

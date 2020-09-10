@@ -14,7 +14,7 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
   position: relative;
 
   .small-font {
-    font-size: $elv-font-s;
+    font-size: $elv-font-m;
   }
 
   .permission-profile + & {
@@ -169,7 +169,7 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 }
 
 .title-permission-list-entry {
-  grid-template-columns: 3fr 2fr 2fr 2fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
 }
 
 .groups-list-entry {

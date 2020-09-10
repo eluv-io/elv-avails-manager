@@ -3,7 +3,7 @@ import AsyncComponent from "../AsyncComponent";
 import {inject, observer} from "mobx-react";
 import PropTypes from "prop-types";
 
-import {ChangeSort, SortableHeader} from "../Misc";
+import {ChangeSort, EffectiveAvailability, SortableHeader} from "../Misc";
 import {Action, DateSelection, Modal} from "elv-components-js";
 import {toJS} from "mobx";
 import Groups from "../Groups";
@@ -47,14 +47,17 @@ class TitlePermissions extends React.Component {
           { this.SortableHeader("profile", "Availability Profile") }
           { this.SortableHeader("startTime", "Start Time") }
           { this.SortableHeader("endTime", "End Time") }
+          <div>Availability</div>
         </div>
         {
           Object.keys(this.props.rootStore.titlePermissions[this.props.objectId] || {})
             .sort((addrA, addrB) => permissions[addrA][this.state.sortKey] < permissions[addrB][this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
+            .filter(address => !this.state.filter || this.props.rootStore.allGroups[address].name.toLowerCase().includes(this.state.filter))
             .map((address, index) => {
               const group = this.props.rootStore.allGroups[address];
-              const groupPermissions = [address];
+              const groupPermissions = this.props.rootStore.titlePermissions[this.props.objectId][address];
               const Update = (key, value) => this.props.rootStore.SetTitlePermissionAccess(this.props.objectId, address, key, value);
+              const profile = this.props.rootStore.titleProfiles[this.props.objectId][groupPermissions.profile];
 
               return (
                 <div className={`list-entry title-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${address}`}>
@@ -88,6 +91,9 @@ class TitlePermissions extends React.Component {
                       value={groupPermissions.endTime}
                       onChange={dateTime => Update("endTime", dateTime)}
                     />
+                  </div>
+                  <div className="small-font">
+                    { EffectiveAvailability([profile.startTime, groupPermissions.startTime], [profile.endTime, groupPermissions.endTime])}
                   </div>
                 </div>
               );

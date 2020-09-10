@@ -101,6 +101,30 @@ class RootStore {
           assetsDefault: "full-access",
           assetPermissions: [],
           offeringPermissions: []
+        },
+        "pre-release": {
+          assets: "no-access",
+          offerings: "no-access",
+          offeringsDefault: "no-access",
+          assetsDefault: "no-access",
+          assetPermissions: [],
+          offeringPermissions: []
+        },
+        "servicing": {
+          assets: "no-access",
+          offerings: "no-access",
+          offeringsDefault: "no-access",
+          assetsDefault: "no-access",
+          assetPermissions: [],
+          offeringPermissions: []
+        },
+        "all-access": {
+          assets: "full-access",
+          offerings: "full-access",
+          offeringsDefault: "full-access",
+          assetsDefault: "full-access",
+          assetPermissions: [],
+          offeringPermissions: []
         }
       };
     }
@@ -172,19 +196,6 @@ class RootStore {
 
     const permission = yield this.client.Permission({objectId});
     this.allTitles[objectId].permission = this.client.permissionLevels[permission].short;
-
-    if(!this.titleProfiles[objectId]) {
-      this.titleProfiles[objectId] = {
-        default: {
-          assets: "full-access",
-          offerings: "full-access",
-          offeringsDefault: "full-access",
-          assetsDefault: "full-access",
-          assetPermissions: [],
-          offeringPermissions: []
-        }
-      };
-    }
   });
 
   @action.bound

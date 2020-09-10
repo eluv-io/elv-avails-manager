@@ -38,7 +38,7 @@ class Titles extends React.Component {
 
   TitleList() {
     if(this.Group()) {
-      return <GroupPermissions groupAddress={this.Group().address} />;
+      return <GroupPermissions groupAddress={this.Group().address} filter={this.state.filter} />;
     }
 
     return (

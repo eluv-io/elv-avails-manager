@@ -210,8 +210,9 @@ h1 {
 .fullscreen-modal {
   .-elv-modal-content {
     height: 90vh;
+    max-width: 75vw;
     min-height: 95vh;
-    min-width: 65rem;
+    min-width: 75vw;
 
     .-elv-async-component-loading {
       height: 80%;
