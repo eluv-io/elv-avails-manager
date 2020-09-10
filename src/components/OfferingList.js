@@ -122,10 +122,10 @@ OfferingList.propTypes = {
   selectable: PropTypes.bool,
   onSelect: PropTypes.func,
   withPermissions: PropTypes.bool,
-  actions: PropTypes.oneOfType(
+  actions: PropTypes.oneOfType([
     PropTypes.array,
     PropTypes.node
-  )
+  ])
 };
 
 export default OfferingList;

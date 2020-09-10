@@ -30,7 +30,6 @@ class App extends React.Component {
     this.Content = this.Content.bind(this);
   }
 
-
   Content() {
     // This function will not be called until the root store initialization has
     // completed and the client is available
@@ -39,10 +38,8 @@ class App extends React.Component {
       <div className="app-container">
         <nav className="navigation-tabs -elv-tab-container">
           <NavLink to="/titles" className="-elv-tab" activeClassName="selected">Titles</NavLink>
-          <NavLink to="/profiles" className="-elv-tab" activeClassName="selected">Profiles</NavLink>
           <NavLink to="/users" className="-elv-tab" activeClassName="selected">Users</NavLink>
           <NavLink to="/groups" className="-elv-tab" activeClassName="selected">Groups</NavLink>
-          <NavLink to="/view" className="-elv-tab" activeClassName="selected">Effective View</NavLink>
         </nav>
         <main>
           <Switch>
@@ -51,15 +48,11 @@ class App extends React.Component {
 
             <Route exact path="/groups" component={Groups} />
             <Route exact path="/groups/:groupAddress" component={Titles} />
-            <Route exact path="/groups/:groupAddress/:objectId" component={Title} />
-            <Route exact path="/groups/:groupAddress/:objectId/permissions/:permissionType/:targetId/assets" component={AssetPermissions} />
-            <Route exact path="/groups/:groupAddress/:objectId/permissions/:permissionType/:targetId/offerings" component={OfferingPermissions} />
-            <Route exact path="/groups/:groupAddress/:objectId/assets/:assetKey" component={Asset} />
 
             <Route exact path="/titles" component={Titles} />
             <Route exact path="/titles/:objectId" component={Title} />
-            <Route exact path="/titles/:objectId/permissions/:permissionType/:targetId/assets" component={AssetPermissions} />
-            <Route exact path="/titles/:objectId/permissions/:permissionType/:targetId/offerings" component={OfferingPermissions} />
+            <Route exact path="/titles/:objectId/permissions/profiles/:profile/assets" component={AssetPermissions} />
+            <Route exact path="/titles/:objectId/permissions/profiles/:profile/offerings" component={OfferingPermissions} />
 
             <Route exact path="/titles/:objectId/assets/:assetKey" component={Asset} />
 

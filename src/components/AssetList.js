@@ -162,10 +162,10 @@ AssetList.propTypes = {
   onSelect: PropTypes.func,
   backPath: PropTypes.string,
   withPermissions: PropTypes.bool,
-  actions: PropTypes.oneOfType(
+  actions: PropTypes.oneOfType([
     PropTypes.array,
     PropTypes.node
-  )
+  ])
 };
 
 export default AssetList;

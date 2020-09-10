@@ -39,6 +39,7 @@ class Groups extends React.Component {
           <div className="list-entry list-header groups-list-entry">
             { this.SortableHeader("name", "Name") }
             { this.SortableHeader("description", "Description") }
+            <div>Titles</div>
           </div>
           {
             Object.values(this.props.rootStore.allGroups)
@@ -53,7 +54,8 @@ class Groups extends React.Component {
                       onClick={() => this.props.onSelect(address)}
                     >
                       <div title={address}>{ name }</div>
-                      <div>{ description }</div>
+                      <div className="small-font">{ description }</div>
+                      <div>{ this.props.rootStore.groupTitles(address).length }</div>
                     </div>
                   );
                 }
@@ -66,6 +68,7 @@ class Groups extends React.Component {
                   >
                     <div title={address}>{ name }</div>
                     <div>{ description }</div>
+                    <div>{ this.props.rootStore.groupTitles(address).length }</div>
                   </Link>
                 );
               })

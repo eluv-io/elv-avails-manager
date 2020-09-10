@@ -13,6 +13,10 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
   display: grid;
   position: relative;
 
+  .small-font {
+    font-size: $elv-font-s;
+  }
+
   .permission-profile + & {
     margin-top: $elv-spacing-m;
   }
@@ -161,9 +165,17 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 }
 
 .title-profile-list-entry {
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+}
+
+.title-permission-list-entry {
+  grid-template-columns: 3fr 2fr 2fr 2fr;
 }
 
 .groups-list-entry {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 2fr 3fr 1fr;
+}
+
+.group-titles-list-entry {
+  grid-template-columns: 1fr 3fr;
 }

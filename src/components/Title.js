@@ -3,13 +3,13 @@ import Path from "path";
 import {inject, observer} from "mobx-react";
 import {BackButton} from "./Misc";
 import AsyncComponent from "./AsyncComponent";
-import {Action, LabelledField, Tabs, Modal} from "elv-components-js";
+import {Action, Form, LabelledField, Modal, Tabs} from "elv-components-js";
 
 import AppFrame from "./AppFrame";
-import TitlePermission from "./permissions/TitlePermission";
+import TitleProfile from "./permissions/TitleProfile";
 import AssetList from "./AssetList";
 import OfferingList from "./OfferingList";
-import Groups from "./Groups";
+import TitlePermissions from "./permissions/TitlePermissions";
 
 @inject("rootStore")
 @observer
@@ -21,10 +21,11 @@ class Title extends React.Component {
       showPreview: false,
       tab: (new URLSearchParams(this.props.location.search || "")).get("tab") || "title",
       sortKey: "attachment_file_name",
-      sortAsc: true
+      sortAsc: true,
+      profileName: ""
     };
 
-    this.AddGroupPermission = this.AddGroupPermission.bind(this);
+    this.AddTitleProfile = this.AddTitleProfile.bind(this);
     this.CloseModal = this.CloseModal.bind(this);
     this.ActivateModal = this.ActivateModal.bind(this);
 
@@ -93,17 +94,19 @@ class Title extends React.Component {
   Profiles() {
     return (
       <div className="list title-profile-list">
+        <div className="controls">
+          <Action onClick={this.ActivateModal}>Add Availability Profile</Action>
+        </div>
         <div className="list-entry list-header title-profile-list-entry title-profile-list-header">
           <div>Profile</div>
-          <div>Title Access</div>
           <div>Assets</div>
           <div>Offerings</div>
           <div>Start Time</div>
           <div>End Time</div>
         </div>
         {
-          this.props.rootStore.profiles.map((profile, index) =>
-            <TitlePermission
+          Object.keys(this.props.rootStore.titleProfiles[this.Title().objectId]).map((profile, index) =>
+            <TitleProfile
               key={`title-profile-${this.Title().objectId}-${profile}`}
               objectId={this.Title().objectId}
               profile={profile}
@@ -115,39 +118,13 @@ class Title extends React.Component {
     );
   }
 
-  Permissions() {
-    return (
-      <div className="list title-profile-list">
-        {
-          this.Group() ? null :
-            <div className="controls">
-              <Action onClick={this.ActivateModal}>Add Group Permission</Action>
-            </div>
-        }
-        <div className="list-entry list-header title-profile-list-entry title-profile-list-header">
-          <div>Access Group</div>
-          <div>Title Access</div>
-          <div>Assets</div>
-          <div>Offerings</div>
-          <div>Start Time</div>
-          <div>End Time</div>
-        </div>
-        {
-          this.Group() ?
-            <TitlePermission objectId={this.Title().objectId} /> :
-            Object.keys(this.props.rootStore.titlePermissions[this.Title().objectId] || {}).map((address, index) =>
-              <TitlePermission key={`title-permission-${address}`} objectId={this.Title().objectId} groupAddress={address} index={index} />
-            )
-        }
-      </div>
-    );
-  }
+
 
   Content() {
     let content;
     switch (this.state.tab) {
       case "permissions":
-        content = this.Permissions();
+        content = <TitlePermissions objectId={this.Title().objectId} />;
         break;
       case "profiles":
         content = this.Profiles();
@@ -169,7 +146,7 @@ class Title extends React.Component {
 
     return (
       <div className="page-container">
-        { this.state.modal }
+        { this.state.modal ? this.TitleProfileModal() : null }
         <header>
           <BackButton to={Path.dirname(this.props.location.pathname)} />
           <h1>{ group ? `${group.name} | ${this.Title().title} | Title Permissions` : this.Title().title }</h1>
@@ -178,7 +155,7 @@ class Title extends React.Component {
         <Tabs
           selected={this.state.tab}
           onChange={tab => this.setState({tab, showPreview: false})}
-          options={[["Permissions", "permissions"], ["Access Profiles", "profiles"], ["Title", "title"], ["Assets", "assets"], ["Offerings", "offerings"]]}
+          options={[["Permissions", "permissions"], ["Availability Profiles", "profiles"], ["Title", "title"], ["Assets", "assets"], ["Offerings", "offerings"]]}
         />
 
         { content }
@@ -190,13 +167,7 @@ class Title extends React.Component {
     return (
       <AsyncComponent
         Load={async () => {
-          if(this.props.match.params.groupAddress){
-            this.props.rootStore.InitializeGroupTitlePermission(this.props.match.params.groupAddress, this.props.match.params.objectId);
-
-            if(!this.Group()) {
-              await this.props.rootStore.LoadGroups();
-            }
-          }
+          await this.props.rootStore.LoadGroups();
 
           if(this.Title() && this.Title().metadata.assets) { return; }
 
@@ -207,30 +178,37 @@ class Title extends React.Component {
     );
   }
 
-  /* Group Selection */
+  /* New Profile Name*/
 
-  AddGroupPermission(groupAddress) {
-    this.props.rootStore.InitializeGroupTitlePermission(groupAddress, this.Title().objectId);
+  AddTitleProfile() {
+    this.props.rootStore.AddTitleProfile(this.Title().objectId, this.state.profileName);
 
     this.CloseModal();
   }
 
+  TitleProfileModal() {
+    return (
+      <Modal
+        className="profile-creation-modal"
+        closable={true}
+        OnClickOutside={this.CloseModal}
+      >
+        <Form OnSubmit={this.AddTitleProfile} legend="Add New Availability Profile">
+          <div className="form-content">
+            <label htmlFor="profileName">Name</label>
+            <input name="profileName" value={this.state.profileName} onChange={event => this.setState({profileName: event.target.value})} />
+          </div>
+        </Form>
+      </Modal>
+    );
+  }
+
   ActivateModal() {
-    this.setState({
-      modal: (
-        <Modal
-          className="title-permission-modal fullscreen-modal"
-          closable={true}
-          OnClickOutside={this.CloseModal}
-        >
-          <Groups selectable onSelect={this.AddGroupPermission} />
-        </Modal>
-      )
-    });
+    this.setState({modal: true});
   }
 
   CloseModal() {
-    this.setState({modal: null});
+    this.setState({modal: false, profileName: ""});
   }
 }
 

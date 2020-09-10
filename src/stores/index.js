@@ -12,11 +12,6 @@ class RootStore {
   @observable initialized = false;
   @observable tab = "users";
 
-  @observable profiles = [
-    "default",
-    "special-partners"
-  ];
-
   // Profile permissions
   @observable titleProfiles = {};
 
@@ -41,6 +36,14 @@ class RootStore {
     return Object.values(this.allTitles)
       .filter(title => groupTitleIds.has(title.objectId))
       .sort((a, b) => a.title < b.title ? -1 : 1);
+  };
+
+  groupTitlePermissions = (groupAddress) => {
+    return this.groupTitleIds(groupAddress).map(id => ({
+      objectId: id,
+      name: this.allTitles[id].metadata.public.name,
+      ...this.titlePermissions[id][groupAddress]
+    }));
   };
 
 
@@ -88,6 +91,19 @@ class RootStore {
       title: this.SafeTraverse(metadata, "public/asset_metadata/display_title") || this.SafeTraverse(metadata, "public/asset_metadata/title"),
       metadata
     };
+
+    if(!this.titleProfiles[objectId]) {
+      this.titleProfiles[objectId] = {
+        default: {
+          assets: "full-access",
+          offerings: "full-access",
+          offeringsDefault: "full-access",
+          assetsDefault: "full-access",
+          assetPermissions: [],
+          offeringPermissions: []
+        }
+      };
+    }
 
     return this.allTitles[objectId];
   });
@@ -158,23 +174,37 @@ class RootStore {
     this.allTitles[objectId].permission = this.client.permissionLevels[permission].short;
 
     if(!this.titleProfiles[objectId]) {
-      this.titleProfiles[objectId] = {};
-    }
-
-    this.profiles.forEach(profile => {
-      if(this.titleProfiles[objectId][profile]) { return; }
-
-      this.titleProfiles[objectId][profile] = {
-        title: "full-access",
-        assets: "full-access",
-        offerings: "full-access",
-        assetsDefault: "no-access",
-        offeringsDefault: "no-access",
-        assetPermissions: [],
-        offeringPermissions: []
+      this.titleProfiles[objectId] = {
+        default: {
+          assets: "full-access",
+          offerings: "full-access",
+          offeringsDefault: "full-access",
+          assetsDefault: "full-access",
+          assetPermissions: [],
+          offeringPermissions: []
+        }
       };
-    });
+    }
   });
+
+  @action.bound
+  AddTitleProfile(objectId, name) {
+    if(this.titleProfiles[objectId][name]) { return; }
+
+    this.titleProfiles[objectId][name] = {
+      assets: "full-access",
+      offerings: "full-access",
+      offeringsDefault: "full-access",
+      assetsDefault: "full-access",
+      assetPermissions: [],
+      offeringPermissions: []
+    };
+  }
+
+  @action.bound
+  RemoveTitleProfile(objectId, name) {
+    delete this.titleProfiles[objectId][name];
+  }
 
   @action.bound
   SetTitleProfileAccess(objectId, profile, key, value) {
@@ -231,13 +261,9 @@ class RootStore {
 
     if(!this.titlePermissions[objectId][groupAddress]) {
       this.titlePermissions[objectId][groupAddress] = {
-        title: "default",
-        assets: "default",
-        offerings: "default",
-        assetsDefault: "no-access",
-        offeringsDefault: "no-access",
-        assetPermissions: [],
-        offeringPermissions: []
+        profile: "default",
+        startTime: undefined,
+        endTime: undefined
       };
     }
   }

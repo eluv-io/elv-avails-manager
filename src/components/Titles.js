@@ -7,6 +7,7 @@ import {Link, Redirect} from "react-router-dom";
 import {BackButton, ChangeSort, SortableHeader} from "./Misc";
 import Path from "path";
 import AsyncComponent from "./AsyncComponent";
+import GroupPermissions from "./permissions/GroupPermissions";
 
 @inject("rootStore")
 @observer
@@ -36,6 +37,10 @@ class Titles extends React.Component {
   }
 
   TitleList() {
+    if(this.Group()) {
+      return <GroupPermissions groupAddress={this.Group().address} />;
+    }
+
     return (
       <div className="list titles-list">
         <div className="list-entry titles-list-entry list-header titles-list-header">
@@ -105,9 +110,13 @@ class Titles extends React.Component {
     await this.props.rootStore.AddTitle(args);
     this.CloseModal();
 
-    this.setState({
-      modal: <Redirect to={UrlJoin(this.props.location.pathname, args.objectId)} />
-    });
+    if(this.Group()) {
+      this.props.rootStore.InitializeGroupTitlePermission(this.Group().address, args.objectId);
+    } else {
+      this.setState({
+        modal: <Redirect to={UrlJoin(this.props.location.pathname, args.objectId)} />
+      });
+    }
   }
 
   ActivateModal() {

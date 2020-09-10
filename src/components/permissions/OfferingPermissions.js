@@ -103,30 +103,12 @@ class OfferingPermissions extends React.Component {
     return this.props.rootStore.allTitles[this.props.match.params.objectId];
   }
 
-  Group() {
-    if(this.props.match.params.permissionType !== "group") { return; }
-
-    return this.props.rootStore.allGroups[this.props.match.params.targetId];
-  }
-
   PermissionInfo() {
-    if(this.props.match.params.permissionType === "profile") {
-      return this.props.rootStore.titleProfiles[this.props.match.params.objectId][this.props.match.params.targetId];
-    }
-
-    if(this.Group()) {
-      return this.props.rootStore.titlePermissions[this.props.match.params.objectId][this.Group().address];
-    }
+    return this.props.rootStore.titleProfiles[this.props.match.params.objectId][this.props.match.params.profile];
   }
 
   Update(key, value) {
-    if(this.props.match.params.permissionType === "profile") {
-      this.props.rootStore.SetTitleProfileAccess(this.props.match.params.objectId, this.props.match.params.targetId, key, value);
-    }
-
-    if(this.Group()) {
-      this.props.rootStore.SetTitlePermissionAccess(this.props.match.params.objectId, this.Group().address, key, value);
-    }
+    this.props.rootStore.SetTitleProfileAccess(this.props.match.params.objectId, this.props.match.params.profile, key, value);
 
     this.setState({version: this.state.version + 1});
   }
@@ -207,17 +189,15 @@ class OfferingPermissions extends React.Component {
   }
 
   Content() {
-    let backPath = Path.dirname(Path.dirname(Path.dirname(Path.dirname(this.props.location.pathname)))).split("?")[0]
-      + `?tab=${this.props.match.params.permissionType === "profile" ? "profiles" : "permissions"}`;
+    let backPath = Path.dirname(Path.dirname(Path.dirname(Path.dirname(this.props.location.pathname)))).split("?")[0] + "?tab=profiles";
 
-    const group = this.Group();
     return (
       <div className="permission-profile offering-profile">
         { this.state.modal }
 
         <header>
           <BackButton to={backPath} />
-          <h1>{ group ? `${group.name} | ${this.Title().title}` : this.Title().title } | Offering Permissions</h1>
+          <h1>{ this.Title().title } | Offering Permissions | { this.props.match.params.profile }</h1>
         </header>
 
         <Selection
@@ -248,11 +228,6 @@ class OfferingPermissions extends React.Component {
     return (
       <AsyncComponent
         Load={async () => {
-          if(this.props.match.params.permissionType === "group") {
-            await this.props.rootStore.LoadGroups();
-            this.props.rootStore.InitializeGroupTitlePermission(this.Group().address, this.props.match.params.objectId);
-          }
-
           if(this.Title() && this.Title().metadata.assets) { return; }
 
           await this.props.rootStore.LoadFullTitle({objectId: this.props.match.params.objectId});
@@ -261,8 +236,6 @@ class OfferingPermissions extends React.Component {
       />
     );
   }
-
-
 
   SetOfferingPermissions({permission, geoRestriction, startTime, endTime, selectedOfferings}) {
     // Override any existing permissions with new ones

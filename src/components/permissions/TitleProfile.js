@@ -1,6 +1,6 @@
 import React from "react";
 import {inject, observer} from "mobx-react";
-import {DateSelection, FormatName, ImageIcon} from "elv-components-js";
+import {DateSelection, ImageIcon} from "elv-components-js";
 import PropTypes from "prop-types";
 import {withRouter} from "react-router";
 import UrlJoin from "url-join";
@@ -11,7 +11,7 @@ import SettingsIcon from "../../static/icons/settings.svg";
 @inject("rootStore")
 @observer
 @withRouter
-class TitlePermission extends React.Component {
+class TitleProfile extends React.Component {
   constructor(props) {
     super(props);
 
@@ -25,31 +25,11 @@ class TitlePermission extends React.Component {
   }
 
   PermissionInfo() {
-    if(this.props.profile) {
-      return this.props.rootStore.titleProfiles[this.props.objectId][this.props.profile];
-    }
-
-    if(this.Group()) {
-      return this.props.rootStore.titlePermissions[this.props.objectId][this.Group().address];
-    }
-  }
-
-  Group() {
-    const groupAddress = this.props.match.params.groupAddress || this.props.groupAddress;
-
-    if(!groupAddress) { return; }
-
-    return this.props.rootStore.allGroups[groupAddress];
+    return this.props.rootStore.titleProfiles[this.props.objectId][this.props.profile];
   }
 
   Update(key, value) {
-    if(this.props.profile) {
-      this.props.rootStore.SetTitleProfileAccess(this.props.objectId, this.props.profile, key, value);
-    }
-
-    if(this.Group()) {
-      this.props.rootStore.SetTitlePermissionAccess(this.props.objectId, this.Group().address, key, value);
-    }
+    this.props.rootStore.SetTitleProfileAccess(this.props.objectId, this.props.profile, key, value);
 
     this.setState({version: this.state.version + 1});
   }
@@ -58,14 +38,6 @@ class TitlePermission extends React.Component {
     let options = [
       <option key="no-access" value="no-access">No Access</option>
     ];
-
-    if(this.Group()) {
-      this.props.rootStore.profiles.map(profile =>
-        options.push(
-          <option key={`access-${profile}`} value={profile}>{ FormatName(profile) }</option>
-        )
-      );
-    }
 
     if(custom) {
       options.push(<option key="custom" value="custom">Custom</option>);
@@ -79,8 +51,8 @@ class TitlePermission extends React.Component {
       let link = UrlJoin(
         this.props.location.pathname,
         "permissions",
-        this.props.profile ? "profile" : "group",
-        this.props.profile || this.Group().address,
+        "profiles",
+        this.props.profile,
         key
       );
 
@@ -108,8 +80,7 @@ class TitlePermission extends React.Component {
     return (
       <React.Fragment>
         <div className={`list-entry title-profile-list-entry ${typeof this.props.index !== "undefined" ? (this.props.index % 2 === 0 ? "even" : "odd") : ""}`}>
-          <div>{ this.props.profile ? FormatName(this.props.profile) : this.Group().name }</div>
-          <div>{ this.AccessSelection("title", false)}</div>
+          <div>{ this.props.profile }</div>
           <div>{ this.AccessSelection("assets")}</div>
           <div>{ this.AccessSelection("offerings")}</div>
           <div>
@@ -134,11 +105,10 @@ class TitlePermission extends React.Component {
   }
 }
 
-TitlePermission.propTypes = {
+TitleProfile.propTypes = {
   objectId: PropTypes.string.isRequired,
-  profile: PropTypes.string,
-  groupAddress: PropTypes.string,
+  profile: PropTypes.string.isRequired,
   index: PropTypes.number
 };
 
-export default TitlePermission;
+export default TitleProfile;
