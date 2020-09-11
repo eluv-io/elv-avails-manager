@@ -118,8 +118,6 @@ class Title extends React.Component {
     );
   }
 
-
-
   Content() {
     let content;
     switch (this.state.tab) {
@@ -167,8 +165,6 @@ class Title extends React.Component {
     return (
       <AsyncComponent
         Load={async () => {
-          await this.props.rootStore.LoadGroups();
-
           if(this.Title() && this.Title().metadata.assets) { return; }
 
           await this.props.rootStore.LoadFullTitle({objectId: this.props.match.params.objectId});

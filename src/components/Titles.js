@@ -89,7 +89,7 @@ class Titles extends React.Component {
       <AsyncComponent
         Load={async () => {
           if(this.props.match.params.groupAddress && !this.Group()){
-            await this.props.rootStore.LoadGroups();
+            await this.props.rootStore.LoadGroup(this.props.match.params.groupAddress);
 
             await Promise.all(
               this.props.rootStore.groupTitleIds(this.props.match.params.groupAddress).map(objectId =>

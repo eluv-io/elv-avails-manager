@@ -95,7 +95,7 @@ class GroupPermissions extends React.Component {
   render() {
     return (
       <AsyncComponent
-        Load={this.props.rootStore.LoadGroups}
+        Load={async () => this.props.rootStore.LoadGroup(this.props.groupAddress)}
         render={this.Content}
       />
     );

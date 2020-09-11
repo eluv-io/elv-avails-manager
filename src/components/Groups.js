@@ -1,11 +1,103 @@
 import React from "react";
-import AsyncComponent from "./AsyncComponent";
 import {inject, observer} from "mobx-react";
 import UrlJoin from "url-join";
+import {Redirect} from "react-router";
 import {Link} from "react-router-dom";
 import PropTypes from "prop-types";
+import {Action, LoadingElement, Modal} from "elv-components-js";
 
 import {ChangeSort, SortableHeader} from "./Misc";
+
+@inject("rootStore")
+@observer
+class GroupBrowser extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      page: 1,
+      perPage: 10,
+      filter: "",
+      loading: false
+    };
+
+    this.UpdateFilter = this.UpdateFilter.bind(this);
+    this.Load = this.Load.bind(this);
+  }
+
+  componentDidMount() {
+    this.Load();
+  }
+
+  async Load() {
+    this.setState({loading: true});
+
+    try {
+      await this.props.rootStore.LoadGroups({
+        page: this.state.page,
+        perPage: this.state.perPage,
+        filter: this.state.filter
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error);
+    } finally {
+      this.setState({loading: false});
+    }
+  }
+
+  SetPage(page) {
+    this.setState({page: page}, this.Load);
+  }
+
+  UpdateFilter(event) {
+    clearTimeout(this.filterTimeout);
+
+    this.setState({filter: event.target.value});
+
+    this.filterTimeout = setTimeout(this.Load, 1000);
+  }
+
+  render() {
+    const startIndex = (this.state.page - 1) * this.state.perPage + 1;
+    return (
+      <div className="group-browser">
+        <h1>Add a Group</h1>
+        <div className="controls">
+          <Action className="secondary" onClick={this.props.onCancel}>Cancel</Action>
+          <input className="filter" name="filter" value={this.state.filter} onChange={this.UpdateFilter} placeholder="Filter Groups..."/>
+        </div>
+        <div className="controls page-controls centered">
+          <Action disabled={this.state.page === 1} onClick={() => this.SetPage(this.state.page - 1)}>Previous</Action>
+          { startIndex } - { startIndex + this.state.perPage - 1 } of { this.props.rootStore.totalGroups }
+          <Action disabled={this.state.page * (this.state.perPage + 1) > this.props.rootStore.totalGroups} onClick={() => this.SetPage(this.state.page + 1)}>Next</Action>
+        </div>
+        <LoadingElement loading={this.state.loading}>
+          <div className="list">
+            <div className="list-entry list-header groups-browse-list-entry">
+              <div>Name</div>
+              <div>Description</div>
+            </div>
+            {
+              this.props.rootStore.groupList.map((group, i) =>
+                <div
+                  key={`groups-${group.address}`}
+                  className={`list-entry list-entry-selectable groups-browse-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
+                  onClick={() => this.props.onComplete(group.address)}
+                >
+                  <div>{ group.name }</div>
+                  <div className="small-font">{ group.description }</div>
+                </div>
+              )
+            }
+          </div>
+        </LoadingElement>
+      </div>
+    );
+  }
+}
+
+
 
 @inject("rootStore")
 @observer
@@ -17,22 +109,27 @@ class Groups extends React.Component {
       filter: "",
       sortKey: "name",
       sortAsc: true,
+      modal: null
     };
-
-    this.Content = this.Content.bind(this);
 
     this.SortableHeader = SortableHeader.bind(this);
     this.ChangeSort = ChangeSort.bind(this);
+
+    this.AddGroup = this.AddGroup.bind(this);
+    this.CloseModal = this.CloseModal.bind(this);
+    this.ActivateModal = this.ActivateModal.bind(this);
   }
 
-  Content() {
+  render() {
     return (
       <div className="page-container groups-page">
+        { this.state.modal }
         <header>
           <h1>Access Groups</h1>
         </header>
 
         <div className="controls">
+          <Action onClick={this.ActivateModal}>Add Group</Action>
           <input className="filter" name="filter" value={this.state.filter} onChange={event => this.setState({filter: event.target.value})} placeholder="Filter Groups..."/>
         </div>
         <div className="list">
@@ -78,13 +175,36 @@ class Groups extends React.Component {
     );
   }
 
-  render() {
-    return (
-      <AsyncComponent
-        Load={this.props.rootStore.LoadGroups}
-        render={this.Content}
-      />
-    );
+  /* Group Browser */
+
+  async AddGroup(address) {
+    await this.props.rootStore.LoadGroup(address);
+    this.CloseModal();
+
+    this.setState({
+      modal: <Redirect to={UrlJoin(this.props.location.pathname, address)} />
+    });
+  }
+
+  ActivateModal() {
+    this.setState({
+      modal: (
+        <Modal
+          className="asset-form-modal fullscreen-modal"
+          closable={true}
+          OnClickOutside={this.CloseModal}
+        >
+          <GroupBrowser
+            onComplete={this.AddGroup}
+            onCancel={this.CloseModal}
+          />
+        </Modal>
+      )
+    });
+  }
+
+  CloseModal() {
+    this.setState({modal: null});
   }
 }
 

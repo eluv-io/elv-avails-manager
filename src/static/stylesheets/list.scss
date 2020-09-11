@@ -172,6 +172,10 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
   grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
 }
 
+.groups-browse-list-entry {
+  grid-template-columns: 1fr 2fr;
+}
+
 .groups-list-entry {
   grid-template-columns: 2fr 3fr 1fr;
 }

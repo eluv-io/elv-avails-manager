@@ -4,7 +4,7 @@ import React from "react";
 import AsyncComponent from "./AsyncComponent";
 import {inject, observer} from "mobx-react";
 import PropTypes from "prop-types";
-import {Action, Maybe} from "elv-components-js";
+import {Action, LoadingElement, Maybe} from "elv-components-js";
 
 @observer
 class BrowserList extends React.Component {
@@ -14,7 +14,8 @@ class BrowserList extends React.Component {
     this.state = {
       page: 1,
       filter: "",
-      version: 1
+      version: 1,
+      loading: false
     };
   }
 
@@ -93,35 +94,44 @@ class BrowserList extends React.Component {
           key={`browser-listing-version-${this.state.version}`}
           Load={() => this.props.Load({page: this.state.page, filter: this.state.filter})}
           render={() => (
-            <ul className={`browser ${this.props.hashes ? "mono" : ""}`}>
-              {list.map(({id, name, objectName, objectDescription, assetType, titleType}) => {
-                let disabled =
-                  (this.props.assetTypes && !this.props.assetTypes.includes(assetType)) ||
-                  (this.props.titleTypes && !this.props.titleTypes.includes(titleType));
+            <LoadingElement loading={this.state.loading}>
+              <ul className={`browser ${this.props.hashes ? "mono" : ""}`}>
+                {list.map(({id, name, objectName, objectDescription, assetType, titleType}) => {
+                  let disabled =
+                    (this.props.assetTypes && !this.props.assetTypes.includes(assetType)) ||
+                    (this.props.titleTypes && !this.props.titleTypes.includes(titleType));
 
-                let title = objectName ? `${objectName}\n\n${id}${objectDescription ? `\n\n${objectDescription}` : ""}` : id;
-                if(disabled) {
-                  title = title + "\n\nTitle type or asset type not allowed for this list:";
-                  title = title + `\n\tTitle Type: ${titleType || "<not specified>"}`;
-                  title = title + `\n\tAllowed Title Types: ${(this.props.titleTypes || []).join(", ")}`;
-                  title = title + `\n\tAsset Type: ${assetType || "<not specified>"}`;
-                  title = title + `\n\tAllowed Asset Types: ${(this.props.assetTypes || []).join(", ")}`;
-                }
+                  let title = objectName ? `${objectName}\n\n${id}${objectDescription ? `\n\n${objectDescription}` : ""}` : id;
+                  if(disabled) {
+                    title = title + "\n\nTitle type or asset type not allowed for this list:";
+                    title = title + `\n\tTitle Type: ${titleType || "<not specified>"}`;
+                    title = title + `\n\tAllowed Title Types: ${(this.props.titleTypes || []).join(", ")}`;
+                    title = title + `\n\tAsset Type: ${assetType || "<not specified>"}`;
+                    title = title + `\n\tAllowed Asset Types: ${(this.props.assetTypes || []).join(", ")}`;
+                  }
 
-                return (
-                  <li key={`browse-entry-${id}`}>
-                    <button
-                      disabled={disabled}
-                      title={title}
-                      onClick={() => this.props.Select(id)}
-                    >
-                      <div>{name}</div>
-                      {assetType ? <div className="hint">{assetType}</div> : null}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+                  return (
+                    <li key={`browse-entry-${id}`}>
+                      <button
+                        disabled={disabled}
+                        title={title}
+                        onClick={async () => {
+                          this.setState({loading: true});
+                          try {
+                            await this.props.Select(id);
+                          } finally {
+                            this.setState({loading: false});
+                          }
+                        }}
+                      >
+                        <div>{name}</div>
+                        {assetType ? <div className="hint">{assetType}</div> : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </LoadingElement>
           )}
         />
       </div>

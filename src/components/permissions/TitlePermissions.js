@@ -1,5 +1,4 @@
 import React from "react";
-import AsyncComponent from "../AsyncComponent";
 import {inject, observer} from "mobx-react";
 import PropTypes from "prop-types";
 
@@ -20,7 +19,6 @@ class TitlePermissions extends React.Component {
       sortAsc: true,
     };
 
-    this.Content = this.Content.bind(this);
     this.AddGroupPermission = this.AddGroupPermission.bind(this);
     this.CloseModal = this.CloseModal.bind(this);
     this.ActivateModal = this.ActivateModal.bind(this);
@@ -29,7 +27,7 @@ class TitlePermissions extends React.Component {
     this.ChangeSort = ChangeSort.bind(this);
   }
 
-  Content() {
+  render() {
     const permissions = toJS({
       ...this.props.rootStore.titlePermissions[this.props.objectId],
     });
@@ -100,15 +98,6 @@ class TitlePermissions extends React.Component {
             })
         }
       </div>
-    );
-  }
-
-  render() {
-    return (
-      <AsyncComponent
-        Load={this.props.rootStore.LoadGroups}
-        render={this.Content}
-      />
     );
   }
 

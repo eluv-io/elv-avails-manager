@@ -18,8 +18,13 @@ class RootStore {
   // User/Group permissions
   @observable titlePermissions = {};
 
+  // Titles and groups with permissions
   @observable allTitles = {};
   @observable allGroups = {};
+
+  @observable groupList = [];
+  @observable groupCache = {};
+  @observable totalGroups = 0;
 
   @computed get titles() {
     return Object.values(this.allTitles)
@@ -227,41 +232,54 @@ class RootStore {
     this.titlePermissions[objectId][address][key] = value;
   }
 
+  GroupInfo = flow(function * (address) {
+    if(!this.groupCache[address]) {
+      const metadata = yield this.client.ContentObjectMetadata({
+        libraryId: (yield this.client.ContentSpaceId()).replace(/^ispc/, "ilib"),
+        objectId: this.client.utils.AddressToObjectId(address),
+        metadataSubtree: "public",
+        select: [
+          "name",
+          "description"
+        ]
+      });
+
+      this.groupCache[address] = {
+        address,
+        name: metadata.name || address,
+        description: metadata.description || ""
+      };
+    }
+
+    return this.groupCache[address];
+  });
+
   @action.bound
-  LoadGroups = flow(function * () {
-    // Check if groups already loaded
-    if(Object.keys(this.allGroups).length > 0) { return; }
+  LoadGroup = flow(function * (address) {
+    this.allGroups[address] = yield this.GroupInfo(address);
+  });
 
-    const groupAddresses = (yield this.client.Collection({collectionType: "accessGroups"}))
-    // TODO: Remove
-      .sort((a, b) => a < b ? -1 : 1)
-      .slice(0, 20);
+  @action.bound
+  LoadGroups = flow(function * ({page=1, perPage=10, filter=""}) {
+    const startIndex = (page - 1) * perPage;
+    const groupAddresses = (yield this.client.Collection({collectionType: "accessGroups"}));
 
-    let groupInfo = {};
-    yield this.client.utils.LimitedMap(
-      10,
-      groupAddresses,
-      async address => {
-        address = this.client.utils.FormatAddress(address);
-        const metadata = await this.client.ContentObjectMetadata({
-          libraryId: (await this.client.ContentSpaceId()).replace(/^ispc/, "ilib"),
-          objectId: this.client.utils.AddressToObjectId(address),
-          metadataSubtree: "public",
-          select: [
-            "name",
-            "description"
-          ]
-        });
+    this.totalGroups = groupAddresses.length;
 
-        groupInfo[address] = {
-          address,
-          name: metadata.name || address,
-          description: metadata.description || ""
-        };
-      }
-    );
+    this.groupList = (
+      yield this.client.utils.LimitedMap(
+        10,
+        groupAddresses,
+        async address => {
+          address = this.client.utils.FormatAddress(address);
 
-    this.allGroups = groupInfo;
+          return this.GroupInfo(address);
+        }
+      )
+    )
+      .filter(group => !filter || group.name.toLowerCase().includes(filter.toLowerCase()) || group.address.includes(filter.toLowerCase()))
+      .sort((a, b) => a.name < b.name ? -1 : 1)
+      .slice(startIndex, startIndex + perPage);
   });
 
   @action.bound
