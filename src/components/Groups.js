@@ -181,9 +181,13 @@ class Groups extends React.Component {
     await this.props.rootStore.LoadGroup(address);
     this.CloseModal();
 
-    this.setState({
-      modal: <Redirect to={UrlJoin(this.props.location.pathname, address)} />
-    });
+    if(this.props.onSelect) {
+      this.props.onSelect(address);
+    } else {
+      this.setState({
+        modal: <Redirect to={UrlJoin(this.props.location.pathname, address)}/>
+      });
+    }
   }
 
   ActivateModal() {
