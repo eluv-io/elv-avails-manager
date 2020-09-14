@@ -307,6 +307,7 @@ class RootStore {
 
     if(!this.titlePermissions[objectId][groupAddress]) {
       this.titlePermissions[objectId][groupAddress] = {
+        type: "group",
         profile: "default",
         startTime: undefined,
         endTime: undefined
@@ -430,17 +431,29 @@ class RootStore {
           this.titleProfiles[titleId][profileName] = loadedProfile;
         }
 
-        /*
-      default: {
-          assets: "full-access",
-            offerings: "full-access",
-            offeringsDefault: "full-access",
-            assetsDefault: "full-access",
-            assetPermissions: [],
-            offeringPermissions: []
-        },
+        this.titlePermissions[titleId] = {};
+        await Promise.all(
+          (authSpec[titleId].permissions || []).map(async loadedPermissions => {
+            const profile = loadedPermissions.profile;
+            await Promise.all(
+              (loadedPermissions.subjects || []).map(async subject => {
+                if(subject.type !== "group") {
+                  // not implemented
+                }
 
-         */
+                await this.LoadGroup(subject.id);
+
+                this.titlePermissions[titleId][subject.id] = {
+                  type: subject.type,
+                  profile
+                };
+
+                if(subject.start) { this.titlePermissions[titleId][subject.id].startTime = DateTime.fromISO(subject.start).toMillis(); }
+                if(subject.end) { this.titlePermissions[titleId][subject.id].endTime = DateTime.fromISO(subject.end).toMillis(); }
+              })
+            );
+          })
+        );
       }
     );
   });
@@ -448,95 +461,19 @@ class RootStore {
   @action.bound
   Save = flow(function * () {
     try {
-      /*
-      Profiles:
-      "profiles": {
-        "default": {
-          "start": "2020-10-01",
-          "end": "2020-12-31",
-          "offerings": [
-            "main",
-            "low-res"
-          ],
-          "assets": {
-            "default_permissions": "full-access",
-            "custom_permissions": {
-              "poster.jpg": {
-                "start": "2020-10-01",
-                "end": "2030-10-01"
-              },
-              "cast.pdf": {
-                "start": "2020-10-01",
-                "end": "2030-10-01"
-              },
-              "plot.pdf": "full-access"
-            }
-          }
-        },
-        "restricted": {
-          "start": "2020-10-01",
-          "end": "2020-12-31",
-          "geo": "us",
-          "offerings": [
-            "low-res"
-          ],
-          "assets": {
-            "default_permissions": "no-access"
-          }
-        },
-
-            "default_permissions": "full-access",
-            "custom_permissions": {
-              "poster.jpg": {
-                "start": "2020-10-01",
-                "end": "2030-10-01"
-                "permission": "no-access"
-              },
-              "cast.pdf": {
-                "start": "2020-10-01",
-                "end": "2030-10-01",
-                "permission": "full-access"
-              },
-              "plot.pdf": {
-                "permission": "no-access"
-              }
-            }
-
-
-       Permissions:
-
-       "permissions": [
-          {
-            "subjects": [
-              "group1",
-              "group2",
-              "user1"
-            ],
-            "profile": "default"
-          },
-          {
-            "subjects": [
-              "group3"
-            ],
-            "profile": "restricted"
-          }
-        ]
-       */
-
       let permissionSpec = {};
+
       Object.keys(this.titleProfiles).forEach(titleId => {
+        // Profiles
+
         permissionSpec[titleId] = {profiles: {}, permissions: []};
 
         Object.keys(this.titleProfiles[titleId]).forEach(profileName => {
           const profile = this.titleProfiles[titleId][profileName];
 
           let profileSpec = {};
-          if(profile.startTime) {
-            profileSpec.start = DateTime.fromMillis(profile.startTime).toISODate();
-          }
-          if(profile.endTime) {
-            profileSpec.end = DateTime.fromMillis(profile.endTime).toISODate();
-          }
+          if(profile.startTime) { profileSpec.start = DateTime.fromMillis(profile.startTime).toISODate(); }
+          if(profile.endTime) { profileSpec.end = DateTime.fromMillis(profile.endTime).toISODate(); }
 
           // Assets
           profileSpec.assets = {default_permission: profile.assets === "custom" ? profile.assetsDefault : profile.assets };
@@ -544,12 +481,8 @@ class RootStore {
             profileSpec.assets.custom_permissions = {};
             profile.assetPermissions.forEach(asset => {
               let assetPermission = {permission: asset.permission};
-              if(asset.startTime) {
-                assetPermission.start = DateTime.fromMillis(asset.startTime).toISODate();
-              }
-              if(asset.endTime) {
-                assetPermission.end = DateTime.fromMillis(asset.endTime).toISODate();
-              }
+              if(asset.startTime) { assetPermission.start = DateTime.fromMillis(asset.startTime).toISODate(); }
+              if(asset.endTime) { assetPermission.end = DateTime.fromMillis(asset.endTime).toISODate(); }
 
               profileSpec.assets.custom_permissions[asset.assetKey] = assetPermission;
             });
@@ -577,6 +510,28 @@ class RootStore {
 
           permissionSpec[titleId].profiles[profileName] = profileSpec;
         });
+
+
+        let profilePermissions = {};
+
+        // Permissions
+        Object.keys(this.titlePermissions[titleId] || {}).map(id => {
+          const permission = this.titlePermissions[titleId][id];
+
+          if(!profilePermissions[permission.profile]) { profilePermissions[permission.profile] = []; }
+
+          let itemPermission = { id, type: permission.type };
+
+          if(permission.startTime) { itemPermission.start = DateTime.fromMillis(permission.startTime).toISODate(); }
+          if(permission.endTime) { itemPermission.end = DateTime.fromMillis(permission.endTime).toISODate(); }
+
+          profilePermissions[permission.profile].push(itemPermission);
+        });
+
+        permissionSpec[titleId].permissions = Object.keys(profilePermissions).map(profileName => ({
+          subjects: profilePermissions[profileName],
+          profile: profileName
+        }));
       });
 
       const {writeToken} = yield this.client.EditContentObject({libraryId: this.libraryId, objectId: this.objectId});
