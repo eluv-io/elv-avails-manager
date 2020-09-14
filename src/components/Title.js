@@ -145,10 +145,10 @@ class Title extends React.Component {
     return (
       <div className="page-container">
         { this.state.modal ? this.TitleProfileModal() : null }
-        <header>
+        <div className="page-header">
           <BackButton to={Path.dirname(this.props.location.pathname)} />
           <h1>{ group ? `${group.name} | ${this.Title().title} | Title Permissions` : this.Title().title }</h1>
-        </header>
+        </div>
 
         <Tabs
           selected={this.state.tab}

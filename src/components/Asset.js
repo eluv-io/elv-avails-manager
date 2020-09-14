@@ -29,10 +29,10 @@ class Asset extends React.Component {
 
     return (
       <div>
-        <header>
+        <div className="page-header">
           <BackButton to={backPath} />
           <h1>{ this.Title().title } | { this.Asset().attachment_file_name }</h1>
-        </header>
+        </div>
 
         <div className="asset-info">
           {

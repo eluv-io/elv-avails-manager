@@ -86,6 +86,7 @@ class TitleProfile extends React.Component {
           <div>{ this.AccessSelection("offerings")}</div>
           <div>
             <DateSelection
+              dateOnly
               readOnly
               noLabel
               value={this.PermissionInfo().startTime}
@@ -94,6 +95,7 @@ class TitleProfile extends React.Component {
           </div>
           <div>
             <DateSelection
+              dateOnly
               readOnly
               noLabel
               value={this.PermissionInfo().endTime}

@@ -69,10 +69,10 @@ class Titles extends React.Component {
     return (
       <div className="page-container titles">
         { this.state.modal }
-        <header>
+        <div className="page-header">
           { group ? <BackButton to={Path.dirname(this.props.location.pathname)} /> : null }
           <h1>{ group ? `${group.name} | Title Permissions` : "All Titles"}</h1>
-        </header>
+        </div>
 
         <div className="controls">
           <Action onClick={this.ActivateModal}>Add Title</Action>

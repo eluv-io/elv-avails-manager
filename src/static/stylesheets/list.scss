@@ -157,11 +157,11 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 }
 
 .offerings-list-entry {
-  grid-template-columns: 2fr 2fr 1fr 1fr;
+  grid-template-columns: 2fr 2fr;
 }
 
 .offerings-list-entry-with-permissions {
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
 }
 
 .title-profile-list-entry {

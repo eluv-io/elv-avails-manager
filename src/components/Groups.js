@@ -124,9 +124,9 @@ class Groups extends React.Component {
     return (
       <div className="page-container groups-page">
         { this.state.modal }
-        <header>
+        <div className="page-header">
           <h1>Access Groups</h1>
-        </header>
+        </div>
 
         <div className="controls">
           <Action onClick={this.ActivateModal}>Add Group</Action>

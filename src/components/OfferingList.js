@@ -41,7 +41,7 @@ class OfferingList extends React.Component {
   }
 
   OfferingEntry(offering, index) {
-    const FormatDate = millis => millis ? DateTime.fromMillis(millis).toISO({suppressMilliseconds: true}) : "";
+    const FormatDate = millis => millis ? DateTime.fromMillis(millis).toISODate() : "";
 
     const isSelected = this.state.selected.find(entry => entry.offeringKey === offering.offeringKey);
     return (
@@ -52,12 +52,6 @@ class OfferingList extends React.Component {
       >
         <div>{ offering.offeringKey }</div>
         <div title={offering.playoutFormats}><span>{ offering.playoutFormats }</span></div>
-        <div title={offering.simpleWatermark ? JSON.stringify(offering.simpleWatermark || {}, null, 2) : null}>
-          { offering.simpleWatermark ? "✓" : null }
-        </div>
-        <div title={offering.imageWatermark ? JSON.stringify(offering.imageWatermark || {}, null, 2) : null}>
-          { offering.imageWatermark ? "✓" : null }
-        </div>
         { this.props.withPermissions ? <div>{offering.permission === "full-access" ? "Full Access" : "No Access"} </div> : null }
         { this.props.withPermissions ? <div>{offering.geoRestriction}</div> : null }
         { this.props.withPermissions ? <div className="date-field">{FormatDate(offering.startTime)} </div> : null }
@@ -86,16 +80,14 @@ class OfferingList extends React.Component {
       <div className="offerings-list">
         <div className="controls">
           { this.props.actions }
-          { this.props.offerings.length > 0 ? <Action className="secondary" onClick={SelectAll}>Select All</Action> : null }
-          { this.state.selected.length > 0 ? <Action className="secondary" onClick={Clear}>Clear Selected</Action> : null }
+          { this.props.offerings.length > 0 && this.props.selectable ? <Action className="secondary" onClick={SelectAll}>Select All</Action> : null }
+          { this.state.selected.length > 0 && this.props.selectable ? <Action className="secondary" onClick={Clear}>Clear Selected</Action> : null }
           <input className="filter" name="filter" value={this.state.filter} onChange={event => this.setState({filter: event.target.value})} placeholder="Filter Offerings..."/>
         </div>
         <div className="list">
           <div className={`list-entry offerings-list-entry list-header offerings-list-header ${this.props.withPermissions ? "offerings-list-entry-with-permissions" : ""}`}>
             { this.SortableHeader("offeringKey", "Offering") }
             { this.SortableHeader("playoutFormats", "Playout Formats") }
-            { this.SortableHeader("simpleWatermark", "Simple Watermark") }
-            { this.SortableHeader("imageWatermark", "Image Watermark") }
             { this.props.withPermissions ? this.SortableHeader("permission", "Permission") : null }
             { this.props.withPermissions ? this.SortableHeader("geoRestriction", "Geo Restriction") : null }
             { this.props.withPermissions ? this.SortableHeader("startTime", "Start Time") : null }

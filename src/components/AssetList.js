@@ -64,7 +64,7 @@ class AssetList extends React.Component {
       }
     };
 
-    const FormatDate = millis => millis ? DateTime.fromMillis(millis).toISO({suppressMilliseconds: true}) : "";
+    const FormatDate = millis => millis ? DateTime.fromMillis(millis).toISODate({suppressMilliseconds: true}) : "";
 
     if(!this.props.selectable) {
       return (
@@ -126,8 +126,8 @@ class AssetList extends React.Component {
       <div className="assets-list">
         <div className="controls">
           { this.props.actions }
-          { this.props.assets.length > 0 ? <Action className="secondary" onClick={SelectAll}>Select All</Action> : null }
-          { this.state.selected.length > 0 ? <Action className="secondary" onClick={Clear}>Clear Selected</Action> : null }
+          { this.props.assets.length > 0 && this.props.selectable ? <Action className="secondary" onClick={SelectAll}>Select All</Action> : null }
+          { this.state.selected.length > 0 && this.props.selectable ? <Action className="secondary" onClick={Clear}>Clear Selected</Action> : null }
           <input className="filter" name="filter" value={this.state.filter} onChange={event => this.setState({filter: event.target.value})} placeholder="Filter Assets..."/>
         </div>
         <div className="list">

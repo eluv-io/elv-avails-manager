@@ -76,6 +76,7 @@ class TitlePermissions extends React.Component {
                   </div>
                   <div>
                     <DateSelection
+                      dateOnly
                       readOnly
                       noLabel
                       value={groupPermissions.startTime}
@@ -84,6 +85,7 @@ class TitlePermissions extends React.Component {
                   </div>
                   <div>
                     <DateSelection
+                      dateOnly
                       readOnly
                       noLabel
                       value={groupPermissions.endTime}

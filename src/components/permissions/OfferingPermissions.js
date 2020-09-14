@@ -39,8 +39,8 @@ class OfferingSelectionModal extends React.Component {
           options={[["No Access", "no-access"], ["Full Access", "full-access"]]}
           onChange={permission => this.setState({permission})}
         />
-        <DateSelection readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
-        <DateSelection readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
+        <DateSelection dateOnly readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
+        <DateSelection dateOnly readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
         <Selection
           label="Geo Restriction"
           value={this.state.geoRestriction}
@@ -53,6 +53,8 @@ class OfferingSelectionModal extends React.Component {
           onSelect={selectedOfferings => this.setState({selectedOfferings})}
           actions={
             <Action
+              className={this.state.selectedOfferings.length === 0 ? "secondary" : ""}
+              disabled={this.state.selectedOfferings.length === 0}
               onClick={() =>
                 this.props.onSubmit({
                   permission: this.state.permission,
@@ -104,7 +106,7 @@ class OfferingPermissions extends React.Component {
   }
 
   PermissionInfo() {
-    return this.props.rootStore.titleProfiles[this.props.match.params.objectId][this.props.match.params.profile];
+    return this.props.rootStore.titleProfiles[this.props.match.params.objectId][this.props.match.params.profile] || [];
   }
 
   Update(key, value) {
@@ -125,8 +127,8 @@ class OfferingPermissions extends React.Component {
           options={[["No Access", "no-access"], ["Full Access", "full-access"]]}
           onChange={permission => this.setState({permission})}
         />
-        <DateSelection readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
-        <DateSelection readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
+        <DateSelection dateOnly readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
+        <DateSelection dateOnly readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
         <Selection
           label="Geo Restriction"
           value={this.state.geoRestriction}
@@ -195,10 +197,10 @@ class OfferingPermissions extends React.Component {
       <div className="permission-profile offering-profile">
         { this.state.modal }
 
-        <header>
+        <div className="page-header">
           <BackButton to={backPath} />
           <h1>{ this.Title().title } | Offering Permissions | { this.props.match.params.profile }</h1>
-        </header>
+        </div>
 
         <Selection
           className="offering-default-permission"
