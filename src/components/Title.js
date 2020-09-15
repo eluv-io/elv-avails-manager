@@ -19,7 +19,7 @@ class Title extends React.Component {
 
     this.state = {
       showPreview: false,
-      tab: (new URLSearchParams(this.props.location.search || "")).get("tab") || "title",
+      tab: (new URLSearchParams(this.props.location.search || "")).get("tab") || "profiles",
       sortKey: "attachment_file_name",
       sortAsc: true,
       profileName: ""
@@ -153,7 +153,7 @@ class Title extends React.Component {
         <Tabs
           selected={this.state.tab}
           onChange={tab => this.setState({tab, showPreview: false})}
-          options={[["Permissions", "permissions"], ["Availability Profiles", "profiles"], ["Title", "title"], ["Assets", "assets"], ["Offerings", "offerings"]]}
+          options={[["Availability Profiles", "profiles"], ["Permissions", "permissions"], ["Title", "title"], ["Assets", "assets"], ["Offerings", "offerings"]]}
         />
 
         { content }
