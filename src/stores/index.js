@@ -251,21 +251,29 @@ class RootStore {
 
   GroupInfo = flow(function * (address) {
     if(!this.groupCache[address]) {
-      const metadata = yield this.client.ContentObjectMetadata({
-        libraryId: (yield this.client.ContentSpaceId()).replace(/^ispc/, "ilib"),
-        objectId: this.client.utils.AddressToObjectId(address),
-        metadataSubtree: "public",
-        select: [
-          "name",
-          "description"
-        ]
-      });
+      try {
+        const metadata = yield this.client.ContentObjectMetadata({
+          libraryId: (yield this.client.ContentSpaceId()).replace(/^ispc/, "ilib"),
+          objectId: this.client.utils.AddressToObjectId(address),
+          metadataSubtree: "public",
+          select: [
+            "name",
+            "description"
+          ]
+        });
 
-      this.groupCache[address] = {
-        address,
-        name: metadata.name || address,
-        description: metadata.description || ""
-      };
+        this.groupCache[address] = {
+          address,
+          name: metadata.name || address,
+          description: metadata.description || ""
+        };
+      } catch (error) {
+        this.groupCache[address] = {
+          address,
+          name: address,
+          description: ""
+        };
+      }
     }
 
     return this.groupCache[address];
