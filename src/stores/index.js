@@ -1,5 +1,7 @@
 import {configure, observable, action, computed, flow} from "mobx";
 import {DateTime} from "luxon";
+import URI from "urijs";
+window.URI = URI;
 
 import {FrameClient} from "@eluvio/elv-client-js/src/FrameClient";
 import ContentStore from "./Content";
@@ -13,8 +15,11 @@ class RootStore {
   @observable libraryId;
   @observable objectId;
   @observable versionHash;
+  @observable writeToken;
 
   @observable initialized = false;
+
+  @observable message = {};
 
   @observable tab = "users";
 
@@ -27,10 +32,21 @@ class RootStore {
   // Titles and groups with permissions
   @observable allTitles = {};
   @observable allGroups = {};
+  @observable allOAuthGroups = {};
 
   @observable groupList = [];
   @observable groupCache = {};
+
+  @observable oauthGroups;
+  @observable oauthUsers;
+
   @observable totalGroups = 0;
+  @observable totalOAuthGroups = 0;
+
+  @observable oauthSettings = {
+    domain: "",
+    adminToken: ""
+  };
 
   @computed get titles() {
     return Object.values(this.allTitles)
@@ -57,6 +73,15 @@ class RootStore {
     }));
   };
 
+  @action.bound
+  SetError(error) {
+    this.message = { error, key: Math.random() };
+  }
+
+  @action.bound
+  SetMessage(message) {
+    this.message = { message, key: Math.random() };
+  }
 
 
   SafeTraverse = (object, path) => {
@@ -263,12 +288,14 @@ class RootStore {
         });
 
         this.groupCache[address] = {
+          type: "fabricGroup",
           address,
           name: metadata.name || address,
           description: metadata.description || ""
         };
       } catch (error) {
         this.groupCache[address] = {
+          type: "fabricGroup",
           address,
           name: address,
           description: ""
@@ -279,9 +306,23 @@ class RootStore {
     return this.groupCache[address];
   });
 
+  async OAuthGroupInfo(id) {
+    const group = this.oauthGroups.find(group => group.address === id);
+
+    if(!group) {
+      throw Error("Unable to find group " + id);
+    }
+
+    return group;
+  }
+
   @action.bound
-  LoadGroup = flow(function * (address) {
-    this.allGroups[address] = yield this.GroupInfo(address);
+  LoadGroup = flow(function * (address, type) {
+    if(type === "fabricGroup") {
+      this.allGroups[address] = yield this.GroupInfo(address);
+    } else {
+      this.allGroups[address] = yield this.OAuthGroupInfo(address);
+    }
   });
 
   @action.bound
@@ -308,14 +349,25 @@ class RootStore {
   });
 
   @action.bound
-  InitializeGroupTitlePermission(groupAddress, objectId) {
+  LoadOAuthGroups = ({page=1, perPage=10, filter=""}) => {
+    if(!this.oauthGroups) { return; }
+
+    const startIndex = (page - 1) * perPage;
+
+    this.groupList = this.oauthGroups
+      .filter(group => !filter || group.name.toLowerCase().includes(filter.toLowerCase()) || group.address.includes(filter.toLowerCase()))
+      .slice(startIndex, startIndex + perPage);
+  };
+
+  @action.bound
+  InitializeGroupTitlePermission(groupAddress, objectId, type) {
     if(!this.titlePermissions[objectId]) {
       this.titlePermissions[objectId] = {};
     }
 
     if(!this.titlePermissions[objectId][groupAddress]) {
       this.titlePermissions[objectId][groupAddress] = {
-        type: "group",
+        type,
         profile: "default",
         startTime: undefined,
         endTime: undefined
@@ -352,6 +404,23 @@ class RootStore {
       throw Error("Missing query parameter 'versionHash'");
     }
 
+    const oktaParameters = yield this.client.ContentObjectMetadata({
+      libraryId: this.libraryId,
+      objectId: this.objectId,
+      metadataSubtree: "request_parameters"
+    });
+
+    if(oktaParameters) {
+      try {
+        this.oauthSettings.domain = URI(oktaParameters.url).origin();
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("Failed to parse oauth domain");
+        // eslint-disable-next-line no-console
+        console.error(error);
+      }
+    }
+
     yield this.Load();
   });
 
@@ -360,9 +429,146 @@ class RootStore {
     this.tab = tab;
   }
 
+  @action.bound
+  SetOAuthSetting(key, value) {
+    this.oauthSettings[key] = value;
+  }
+
+  @action.bound
+  async QueryOAuthAPI(path, params={}) {
+    const url = `${this.oauthSettings.domain.trim()}/api/v1/\${API}`;
+
+    const currentUrl = await this.client.ContentObjectMetadata({
+      libraryId: this.libraryId,
+      objectId: this.objectId,
+      writeToken: this.writeToken,
+      metadataSubtree: "request_parameters/url"
+    });
+
+    if(currentUrl !== url) {
+      const writeToken = await this.WriteToken();
+      await this.client.ReplaceMetadata({
+        libraryId: this.libraryId,
+        objectId: this.objectId,
+        writeToken,
+        metadataSubtree: "request_parameters",
+        metadata: {
+          "headers": {
+            "Accept": "application/json",
+            "Authorization": "SSWS ${API_KEY}",
+            "Content-Type": "application/json"
+          },
+          "method": "GET",
+          "url": `${this.oauthSettings.domain}/api/v1/\${API}`
+        },
+      });
+    }
+
+    if(params) {
+      path = `${path}?${Object.keys(params).map(key => `${key}=${params[key]}`).join("&")}`;
+    }
+
+    let proxyUrl = await this.client.FabricUrl({
+      libraryId: this.libraryId,
+      objectId: this.objectId,
+      writeToken: this.writeToken,
+      rep: "proxy",
+      queryParams: {API_KEY: this.oauthSettings.adminToken, API: path}
+    });
+
+    const result = JSON.parse((await (await fetch(proxyUrl)).json()).body);
+
+    if(result.errorCode) {
+      throw Error(result);
+    }
+
+    return result;
+  }
+
+  @action.bound
+  SyncOAuth = flow(function * () {
+    try {
+      const groups = (yield this.QueryOAuthAPI("groups"))
+        .map(group => ({
+          type: "oauthGroup",
+          address: group.id,
+          name: group.profile.name,
+          description: group.profile.description
+        }));
+
+      const users = (yield this.QueryOAuthAPI("users"))
+        .map(user => ({
+          type: "oauthUser",
+          address: user.id,
+          name: `${user.profile.firstName} ${user.profile.lastName} (${user.profile.email})`
+        }));
+
+      const writeToken = yield this.WriteToken();
+
+      const params = {libraryId: this.libraryId, objectId: this.objectId, writeToken};
+
+      yield this.client.ReplaceMetadata({
+        ...params,
+        metadataSubtree: "oauthSync/users",
+        metadata: users
+      });
+
+      yield this.client.ReplaceMetadata({
+        ...params,
+        metadataSubtree: "oauthSync/groups",
+        metadata: groups
+      });
+
+      yield this.Finalize();
+
+
+      this.oauthGroups = groups;
+      this.oauthUsers = users;
+
+
+      this.SetMessage("Successfully synced with OAuth");
+      return true;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error);
+      this.SetError("Failed to connect to OAuth");
+      return false;
+    }
+  });
+
+  @action.bound
+  WriteToken = flow(function * () {
+    if(!this.writeToken) {
+      const {writeToken} = yield this.client.EditContentObject({libraryId: this.libraryId, objectId: this.objectId});
+
+      this.writeToken = writeToken;
+    }
+
+    return this.writeToken;
+  });
+
+  @action.bound
+  Finalize = flow(function * () {
+    if(!this.writeToken) {
+      throw Error("Write token not created");
+    }
+
+    const {hash} = yield this.client.FinalizeContentObject({libraryId: this.libraryId, objectId: this.objectId, writeToken: this.writeToken});
+
+    this.versionHash = hash;
+    this.writeToken = undefined;
+  });
 
   @action.bound
   Load = flow(function * () {
+    // OAuth Users and Groups
+    const oauthSync = yield this.client.ContentObjectMetadata({libraryId: this.libraryId, objectId: this.objectId, metadataSubtree: "oauthSync"});
+
+    if(oauthSync) {
+      this.oauthUser = oauthSync.users;
+      this.oauthGroups = oauthSync.groups;
+    }
+
     const authSpec = yield this.client.ContentObjectMetadata({libraryId: this.libraryId, objectId: this.objectId, metadataSubtree: "auth_policy_spec"});
 
     if(!authSpec) { return; }
@@ -439,17 +645,14 @@ class RootStore {
           this.titleProfiles[titleId][profileName] = loadedProfile;
         }
 
+        // Permissions
         this.titlePermissions[titleId] = {};
         await Promise.all(
           (authSpec[titleId].permissions || []).map(async loadedPermissions => {
             const profile = loadedPermissions.profile;
             await Promise.all(
               (loadedPermissions.subjects || []).map(async subject => {
-                if(subject.type !== "group") {
-                  // not implemented
-                }
-
-                await this.LoadGroup(subject.id);
+                await this.LoadGroup(subject.id, subject.type);
 
                 this.titlePermissions[titleId][subject.id] = {
                   type: subject.type,
@@ -542,7 +745,7 @@ class RootStore {
         }));
       });
 
-      const {writeToken} = yield this.client.EditContentObject({libraryId: this.libraryId, objectId: this.objectId});
+      const writeToken = yield this.WriteToken();
 
       yield this.client.ReplaceMetadata({
         libraryId: this.libraryId,
@@ -552,7 +755,7 @@ class RootStore {
         metadata: permissionSpec
       });
 
-      yield this.client.FinalizeContentObject({libraryId: this.libraryId, objectId: this.objectId, writeToken});
+      yield this.Finalize();
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);

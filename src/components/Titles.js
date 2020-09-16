@@ -70,7 +70,7 @@ class Titles extends React.Component {
       <div className="page-container titles">
         { this.state.modal }
         <div className="page-header">
-          { group ? <BackButton to={Path.dirname(this.props.location.pathname)} /> : null }
+          { group ? <BackButton to={Path.dirname(Path.dirname(this.props.location.pathname))} /> : null }
           <h1>{ group ? `${group.name} | Title Permissions` : "All Titles"}</h1>
         </div>
 
@@ -89,7 +89,7 @@ class Titles extends React.Component {
       <AsyncComponent
         Load={async () => {
           if(this.props.match.params.groupAddress && !this.Group()){
-            await this.props.rootStore.LoadGroup(this.props.match.params.groupAddress);
+            await this.props.rootStore.LoadGroup(this.props.match.params.groupAddress, this.props.match.params.groupType);
 
             await Promise.all(
               this.props.rootStore.groupTitleIds(this.props.match.params.groupAddress).map(objectId =>
@@ -111,7 +111,7 @@ class Titles extends React.Component {
     this.CloseModal();
 
     if(this.Group()) {
-      this.props.rootStore.InitializeGroupTitlePermission(this.Group().address, args.objectId);
+      this.props.rootStore.InitializeGroupTitlePermission(this.Group().address, args.objectId, this.Group().type);
     } else {
       this.setState({
         modal: <Redirect to={UrlJoin(this.props.location.pathname, args.objectId)} />

@@ -33,11 +33,19 @@ class GroupBrowser extends React.Component {
     this.setState({loading: true});
 
     try {
-      await this.props.rootStore.LoadGroups({
-        page: this.state.page,
-        perPage: this.state.perPage,
-        filter: this.state.filter
-      });
+      if(this.props.oauth) {
+        await this.props.rootStore.LoadOAuthGroups({
+          page: this.state.page,
+          perPage: this.state.perPage,
+          filter: this.state.filter
+        });
+      } else {
+        await this.props.rootStore.LoadGroups({
+          page: this.state.page,
+          perPage: this.state.perPage,
+          filter: this.state.filter
+        });
+      }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error(error);
@@ -59,6 +67,7 @@ class GroupBrowser extends React.Component {
   }
 
   render() {
+    const totalGroups = this.props.oauth ? this.props.rootStore.totalOAuthGroups : this.props.rootStore.totalGroups;
     const startIndex = (this.state.page - 1) * this.state.perPage + 1;
     return (
       <div className="group-browser">
@@ -69,8 +78,8 @@ class GroupBrowser extends React.Component {
         </div>
         <div className="controls page-controls centered">
           <Action disabled={this.state.page === 1} onClick={() => this.SetPage(this.state.page - 1)}>Previous</Action>
-          { startIndex } - { startIndex + this.state.perPage - 1 } of { this.props.rootStore.totalGroups }
-          <Action disabled={this.state.page * (this.state.perPage + 1) > this.props.rootStore.totalGroups} onClick={() => this.SetPage(this.state.page + 1)}>Next</Action>
+          { startIndex } - { Math.min(totalGroups, startIndex + this.state.perPage - 1) } of { totalGroups }
+          <Action disabled={this.state.page * (this.state.perPage + 1) > totalGroups} onClick={() => this.SetPage(this.state.page + 1)}>Next</Action>
         </div>
         <LoadingElement loading={this.state.loading}>
           <div className="list">
@@ -83,7 +92,7 @@ class GroupBrowser extends React.Component {
                 <div
                   key={`groups-${group.address}`}
                   className={`list-entry list-entry-selectable groups-browse-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
-                  onClick={() => this.props.onComplete(group.address)}
+                  onClick={() => this.props.onComplete(group.address, group.type)}
                 >
                   <div>{ group.name }</div>
                   <div className="small-font">{ group.description }</div>
@@ -97,6 +106,9 @@ class GroupBrowser extends React.Component {
   }
 }
 
+GroupBrowser.propTypes = {
+  oauth: PropTypes.bool.isRequired
+};
 
 
 @inject("rootStore")
@@ -129,12 +141,19 @@ class Groups extends React.Component {
         </div>
 
         <div className="controls">
-          <Action onClick={this.ActivateModal}>Add Group</Action>
+          <Action onClick={() => this.ActivateModal(false)}>Add Group</Action>
+          {
+            this.props.rootStore.oauthSettings.domain && this.props.rootStore.oauthGroups ?
+              <Action onClick={() => this.ActivateModal(true)}>
+                Add OAuth Group
+              </Action> : null
+          }
           <input className="filter" name="filter" value={this.state.filter} onChange={event => this.setState({filter: event.target.value})} placeholder="Filter Groups..."/>
         </div>
         <div className="list">
           <div className="list-entry list-header groups-list-entry">
             { this.SortableHeader("name", "Name") }
+            { this.SortableHeader("type", "Type") }
             { this.SortableHeader("description", "Description") }
             <div>Titles</div>
           </div>
@@ -142,15 +161,16 @@ class Groups extends React.Component {
             Object.values(this.props.rootStore.allGroups)
               .filter(({name, description}) => !this.state.filter || (name.toLowerCase().includes(this.state.filter.toLowerCase()) || description.toLowerCase().includes(this.state.filter.toLowerCase())))
               .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
-              .map(({address, name, description}, i) => {
+              .map(({type, address, name, description}, i) => {
                 if(this.props.selectable) {
                   return (
                     <div
                       key={`groups-${address}`}
                       className={`list-entry list-entry-selectable groups-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
-                      onClick={() => this.props.onSelect(address)}
+                      onClick={() => this.props.onSelect(address, type)}
                     >
                       <div title={address}>{ name }</div>
+                      <div title={type}>{ type === "fabricGroup" ? "Fabric" : "OAuth" }</div>
                       <div className="small-font">{ description }</div>
                       <div>{ this.props.rootStore.groupTitles(address).length }</div>
                     </div>
@@ -159,11 +179,12 @@ class Groups extends React.Component {
 
                 return (
                   <Link
-                    to={UrlJoin("groups", address)}
+                    to={UrlJoin("groups", type, address)}
                     key={`groups-${address}`}
                     className={`list-entry groups-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
                   >
                     <div title={address}>{ name }</div>
+                    <div title={type}>{ type === "fabricGroup" ? "Fabric" : "OAuth" }</div>
                     <div>{ description }</div>
                     <div>{ this.props.rootStore.groupTitles(address).length }</div>
                   </Link>
@@ -177,20 +198,21 @@ class Groups extends React.Component {
 
   /* Group Browser */
 
-  async AddGroup(address) {
-    await this.props.rootStore.LoadGroup(address);
+  async AddGroup(address, type) {
+    await this.props.rootStore.LoadGroup(address, type);
+
     this.CloseModal();
 
     if(this.props.onSelect) {
-      this.props.onSelect(address);
+      this.props.onSelect(address, type);
     } else {
       this.setState({
-        modal: <Redirect to={UrlJoin(this.props.location.pathname, address)}/>
+        modal: <Redirect to={UrlJoin(this.props.location.pathname, type, address)}/>
       });
     }
   }
 
-  ActivateModal() {
+  ActivateModal(oauth=false) {
     this.setState({
       modal: (
         <Modal
@@ -199,6 +221,8 @@ class Groups extends React.Component {
           OnClickOutside={this.CloseModal}
         >
           <GroupBrowser
+            key={`group-browser-${oauth}`}
+            oauth={oauth}
             onComplete={this.AddGroup}
             onCancel={this.CloseModal}
           />

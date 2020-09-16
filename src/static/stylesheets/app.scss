@@ -21,12 +21,37 @@ body,
   min-height: 100vh;
 }
 
+@keyframes FadeOut {
+  95% {
+    opacity: 1;
+  }
+
+
+  100% {
+    opacity: 0;
+  }
+}
+
 header {
   align-items: flex-end;
   display: flex;
   grid-area: header;
   height: 3.2rem;
   justify-content: flex-end;
+  position: relative;
+
+  .message {
+    animation: FadeOut 5s linear forwards;
+    bottom: $elv-spacing-xs;
+    color: $elv-color-mediumblue;
+    left: 0;
+    padding-left: $elv-spacing-s;
+    position: absolute;
+  }
+
+  .error-message {
+    color: $elv-color-red;
+  }
 
   button {
     height: 2.2rem;
@@ -51,7 +76,6 @@ header {
     border-right: 1px solid $elv-color-lightestgray;
     flex-direction: column;
     grid-area: nav;
-    padding-top: $elv-spacing-s;
 
     a {
       align-items: center;
@@ -289,5 +313,25 @@ h1 {
       color: $elv-color-text-dark !important;
       cursor: unset;
     }
+  }
+}
+
+form {
+  h1 {
+    margin-bottom: $elv-spacing-l;
+  }
+
+  input {
+    width: 100%;
+  }
+
+  label {
+    align-items: center;
+    display: flex;
+    height: 100%;
+  }
+
+  button {
+    margin-top: $elv-spacing-m;
   }
 }

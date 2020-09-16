@@ -2,6 +2,7 @@ import React from "react";
 import AsyncComponent from "../AsyncComponent";
 import {inject, observer} from "mobx-react";
 import PropTypes from "prop-types";
+import {withRouter} from "react-router";
 import {Link} from "react-router-dom";
 import UrlJoin from "url-join";
 
@@ -11,6 +12,7 @@ import LinkIcon from "../../static/icons/link.svg";
 
 @inject("rootStore")
 @observer
+@withRouter
 class GroupPermissions extends React.Component {
   constructor(props) {
     super(props);
@@ -97,7 +99,7 @@ class GroupPermissions extends React.Component {
   render() {
     return (
       <AsyncComponent
-        Load={async () => this.props.rootStore.LoadGroup(this.props.groupAddress)}
+        Load={async () => this.props.rootStore.LoadGroup(this.props.groupAddress, this.props.match.params.groupType)}
         render={this.Content}
       />
     );

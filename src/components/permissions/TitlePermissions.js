@@ -6,9 +6,11 @@ import {ChangeSort, EffectiveAvailability, SortableHeader} from "../Misc";
 import {Action, DateSelection, Modal} from "elv-components-js";
 import {toJS} from "mobx";
 import Groups from "../Groups";
+import {withRouter} from "react-router";
 
 @inject("rootStore")
 @observer
+@withRouter
 class TitlePermissions extends React.Component {
   constructor(props) {
     super(props);
@@ -105,8 +107,8 @@ class TitlePermissions extends React.Component {
 
   /* Group Selection */
 
-  AddGroupPermission(groupAddress) {
-    this.props.rootStore.InitializeGroupTitlePermission(groupAddress, this.props.objectId);
+  AddGroupPermission(groupAddress, type) {
+    this.props.rootStore.InitializeGroupTitlePermission(groupAddress, this.props.objectId, type);
 
     this.CloseModal();
   }
