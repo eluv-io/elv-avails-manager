@@ -1,5 +1,4 @@
 import React from "react";
-import AsyncComponent from "../AsyncComponent";
 import {inject, observer} from "mobx-react";
 import PropTypes from "prop-types";
 import {withRouter} from "react-router";
@@ -13,7 +12,7 @@ import LinkIcon from "../../static/icons/link.svg";
 @inject("rootStore")
 @observer
 @withRouter
-class GroupPermissions extends React.Component {
+class TargetPermissions extends React.Component {
   constructor(props) {
     super(props);
 
@@ -22,14 +21,11 @@ class GroupPermissions extends React.Component {
       sortAsc: true,
     };
 
-    this.Content = this.Content.bind(this);
     this.SortableHeader = SortableHeader.bind(this);
     this.ChangeSort = ChangeSort.bind(this);
   }
 
-  Content() {
-    const titles = this.props.rootStore.groupTitlePermissions(this.props.groupAddress);
-
+  render() {
     return (
       <div className="list title-profile-list">
         <div className="list-entry list-header title-permission-list-entry title-permission-list-header">
@@ -40,15 +36,15 @@ class GroupPermissions extends React.Component {
           <div>Availability</div>
         </div>
         {
-          titles
+          this.props.permissions
             .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
             .filter(title => !this.props.filter || title.name.toLowerCase().includes(this.props.filter))
             .map((titlePermission, index) => {
-              const Update = (key, value) => this.props.rootStore.SetTitlePermissionAccess(titlePermission.objectId, this.props.groupAddress, key, value);
+              const Update = (key, value) => this.props.rootStore.SetTitlePermissionAccess(titlePermission.objectId, this.props.target.address, key, value);
               const profile = this.props.rootStore.titleProfiles[titlePermission.objectId][titlePermission.profile];
 
               return (
-                <div className={`list-entry title-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${this.props.groupAddress}`}>
+                <div className={`list-entry title-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${this.props.target.address}`}>
                   <div className="small-font">
                     <Link to={UrlJoin("/titles", titlePermission.objectId)}>
                       <ImageIcon icon={LinkIcon} />
@@ -95,20 +91,12 @@ class GroupPermissions extends React.Component {
       </div>
     );
   }
-
-  render() {
-    return (
-      <AsyncComponent
-        Load={async () => this.props.rootStore.LoadGroup(this.props.groupAddress, this.props.match.params.groupType)}
-        render={this.Content}
-      />
-    );
-  }
 }
 
-GroupPermissions.propTypes = {
-  groupAddress: PropTypes.string.isRequired,
+TargetPermissions.propTypes = {
+  permissions: PropTypes.array.isRequired,
+  target: PropTypes.object.isRequired,
   filter: PropTypes.string
 };
 
-export default GroupPermissions;
+export default TargetPermissions;

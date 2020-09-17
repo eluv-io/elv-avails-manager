@@ -169,7 +169,7 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 }
 
 .title-permission-list-entry {
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
 }
 
 .groups-browse-list-entry {
@@ -182,4 +182,12 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 
 .group-titles-list-entry {
   grid-template-columns: 1fr 3fr;
+}
+
+.sites-list-entry {
+  grid-template-columns: 1fr;
+}
+
+.users-list-entry {
+  grid-template-columns: 3fr 2fr 1fr;
 }

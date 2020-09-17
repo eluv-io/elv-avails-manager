@@ -5,8 +5,10 @@ import PropTypes from "prop-types";
 import {ChangeSort, EffectiveAvailability, SortableHeader} from "../Misc";
 import {Action, DateSelection, Modal} from "elv-components-js";
 import {toJS} from "mobx";
-import Groups from "../Groups";
 import {withRouter} from "react-router";
+
+import Groups from "../Groups";
+import Users from "../Users";
 
 @inject("rootStore")
 @observer
@@ -21,7 +23,7 @@ class TitlePermissions extends React.Component {
       sortAsc: true,
     };
 
-    this.AddGroupPermission = this.AddGroupPermission.bind(this);
+    this.AddPermission = this.AddPermission.bind(this);
     this.CloseModal = this.CloseModal.bind(this);
     this.ActivateModal = this.ActivateModal.bind(this);
 
@@ -40,10 +42,12 @@ class TitlePermissions extends React.Component {
       <div className="list title-profile-list">
         { this.state.modal }
         <div className="controls">
-          <Action onClick={this.ActivateModal}>Add Group Permission</Action>
+          <Action onClick={() => this.ActivateModal(false)}>Add User Permission</Action>
+          <Action onClick={() => this.ActivateModal(true)}>Add Group Permission</Action>
         </div>
         <div className="list-entry list-header title-permission-list-entry title-permission-list-header">
-          { this.SortableHeader("name", "Group") }
+          { this.SortableHeader("name", "Name") }
+          { this.SortableHeader("type", "Type") }
           { this.SortableHeader("profile", "Availability Profile") }
           { this.SortableHeader("startTime", "Start Time") }
           { this.SortableHeader("endTime", "End Time") }
@@ -52,21 +56,24 @@ class TitlePermissions extends React.Component {
         {
           Object.keys(this.props.rootStore.titlePermissions[this.props.objectId] || {})
             .sort((addrA, addrB) => permissions[addrA][this.state.sortKey] < permissions[addrB][this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
-            .filter(address => !this.state.filter || this.props.rootStore.allGroups[address].name.toLowerCase().includes(this.state.filter))
+            .filter(address => !this.state.filter || (this.props.rootStore.allGroups[address] || this.props.rootStore.allUsers[address]).name.toLowerCase().includes(this.state.filter))
             .map((address, index) => {
-              const group = this.props.rootStore.allGroups[address];
-              const groupPermissions = this.props.rootStore.titlePermissions[this.props.objectId][address];
+              const target = this.props.rootStore.allGroups[address] || this.props.rootStore.allUsers[address];
+              const permissions = this.props.rootStore.titlePermissions[this.props.objectId][address];
               const Update = (key, value) => this.props.rootStore.SetTitlePermissionAccess(this.props.objectId, address, key, value);
-              const profile = this.props.rootStore.titleProfiles[this.props.objectId][groupPermissions.profile];
+              const profile = this.props.rootStore.titleProfiles[this.props.objectId][permissions.profile];
 
               return (
                 <div className={`list-entry title-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${address}`}>
+                  <div title={target.name}>
+                    { target.name }
+                  </div>
                   <div>
-                    { group.name }
+                    { this.props.rootStore.FormatType(target.type) }
                   </div>
                   <div>
                     <select
-                      value={groupPermissions.profile}
+                      value={permissions.profile}
                       onChange={event => Update("profile", event.target.value)}
                     >
                       {
@@ -81,7 +88,7 @@ class TitlePermissions extends React.Component {
                       dateOnly
                       readOnly
                       noLabel
-                      value={groupPermissions.startTime}
+                      value={permissions.startTime}
                       onChange={dateTime => Update("startTime", dateTime)}
                     />
                   </div>
@@ -90,12 +97,12 @@ class TitlePermissions extends React.Component {
                       dateOnly
                       readOnly
                       noLabel
-                      value={groupPermissions.endTime}
+                      value={permissions.endTime}
                       onChange={dateTime => Update("endTime", dateTime)}
                     />
                   </div>
                   <div className="small-font">
-                    { EffectiveAvailability([profile.startTime, groupPermissions.startTime], [profile.endTime, groupPermissions.endTime])}
+                    { EffectiveAvailability([profile.startTime, permissions.startTime], [profile.endTime, permissions.endTime])}
                   </div>
                 </div>
               );
@@ -105,15 +112,15 @@ class TitlePermissions extends React.Component {
     );
   }
 
-  /* Group Selection */
+  /* Target Selection */
 
-  AddGroupPermission(groupAddress, type) {
-    this.props.rootStore.InitializeGroupTitlePermission(groupAddress, this.props.objectId, type);
+  AddPermission(address, type) {
+    this.props.rootStore.InitializeTitlePermission(address, this.props.objectId, type);
 
     this.CloseModal();
   }
 
-  ActivateModal() {
+  ActivateModal(groups=false) {
     this.setState({
       modal: (
         <Modal
@@ -121,7 +128,11 @@ class TitlePermissions extends React.Component {
           closable={true}
           OnClickOutside={this.CloseModal}
         >
-          <Groups selectable onSelect={this.AddGroupPermission} />
+          {
+            groups ?
+              <Groups selectable onSelect={this.AddPermission} /> :
+              <Users selectable onSelect={this.AddPermission} />
+          }
         </Modal>
       )
     });

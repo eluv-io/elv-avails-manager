@@ -32,6 +32,15 @@ body,
   }
 }
 
+.message {
+  animation: FadeOut 5s linear forwards;
+  color: $elv-color-mediumblue;
+}
+
+.error-message {
+  color: $elv-color-mediumred;
+}
+
 header {
   align-items: flex-end;
   display: flex;
@@ -41,16 +50,10 @@ header {
   position: relative;
 
   .message {
-    animation: FadeOut 5s linear forwards;
     bottom: $elv-spacing-xs;
-    color: $elv-color-mediumblue;
     left: 0;
     padding-left: $elv-spacing-s;
     position: absolute;
-  }
-
-  .error-message {
-    color: $elv-color-red;
   }
 
   button {
@@ -292,6 +295,16 @@ h1 {
   }
 }
 
+.shrink-modal {
+  .-elv-modal-content {
+    height: auto;
+    max-width: unset;
+    min-height: unset;
+    min-width: unset;
+  }
+}
+
+.user-browser,
 .group-browser {
   padding-bottom: 1rem;
 
@@ -317,6 +330,8 @@ h1 {
 }
 
 form {
+  max-width: 500px;
+
   h1 {
     margin-bottom: $elv-spacing-l;
   }
@@ -331,7 +346,27 @@ form {
     height: 100%;
   }
 
-  button {
+  .form-actions {
+    align-content: center;
+    display: flex;
+    justify-content: flex-end;
     margin-top: $elv-spacing-m;
+
+    button {
+      &:not(:last-child) {
+        margin-right: $elv-spacing-xs;
+      }
+    }
+  }
+}
+
+.fabric-user-form {
+  h1 {
+    margin-bottom: 0;
+
+  }
+
+  .message {
+    height: 2rem;
   }
 }

@@ -1,7 +1,7 @@
 import {configure, observable, action, computed, flow} from "mobx";
 import {DateTime} from "luxon";
 import URI from "urijs";
-window.URI = URI;
+import {Buffer} from "buffer";
 
 import {FrameClient} from "@eluvio/elv-client-js/src/FrameClient";
 import ContentStore from "./Content";
@@ -23,25 +23,31 @@ class RootStore {
 
   @observable tab = "users";
 
+  @observable sites = [];
+
   // Profile permissions
   @observable titleProfiles = {};
 
   // User/Group permissions
   @observable titlePermissions = {};
 
-  // Titles and groups with permissions
+  // Things with permissions
   @observable allTitles = {};
   @observable allGroups = {};
+  @observable allUsers = {};
   @observable allOAuthGroups = {};
 
+  @observable userList = [];
+  @observable totalUsers = 0;
+
   @observable groupList = [];
+  @observable totalGroups = 0;
   @observable groupCache = {};
 
   @observable oauthGroups;
   @observable oauthUsers;
 
   @observable totalGroups = 0;
-  @observable totalOAuthGroups = 0;
 
   @observable oauthSettings = {
     domain: "",
@@ -53,25 +59,46 @@ class RootStore {
       .sort((a, b) => a.title < b.title ? -1 : 1);
   }
 
-  groupTitleIds = (groupAddress) => {
-    return Object.keys(this.titlePermissions || {})
-      .filter(objectId => this.titlePermissions[objectId][groupAddress]);
+  targetTitleIds = (address) => {
+    return computed(() =>
+      Object.keys(this.titlePermissions || {})
+        .filter(objectId => this.titlePermissions[objectId][address])
+    ).get();
   };
 
-  groupTitles = (groupAddress) => {
-    const groupTitleIds = new Set(this.groupTitleIds(groupAddress));
-    return Object.values(this.allTitles)
-      .filter(title => groupTitleIds.has(title.objectId))
-      .sort((a, b) => a.title < b.title ? -1 : 1);
+  targetTitles = (address) => {
+    const titleIds = new Set(this.targetTitleIds(address));
+    return computed(() =>
+      Object.values(this.allTitles)
+        .filter(title => titleIds.has(title.objectId))
+        .sort((a, b) => a.title < b.title ? -1 : 1)
+    ).get();
   };
 
-  groupTitlePermissions = (groupAddress) => {
-    return this.groupTitleIds(groupAddress).map(id => ({
-      objectId: id,
-      name: this.allTitles[id].metadata.public.name,
-      ...this.titlePermissions[id][groupAddress]
-    }));
+  targetTitlePermissions = (address) => {
+    return computed(() =>
+      this.targetTitleIds(address).map(id => ({
+        objectId: id,
+        name: this.allTitles[id].metadata.public.name,
+        ...this.titlePermissions[id][address]
+      }))
+    ).get();
   };
+
+  FormatType(type) {
+    switch (type) {
+      case "fabricUser":
+        return "Fabric User";
+      case "oauthUser":
+        return "OAuth User";
+      case "fabricGroup":
+        return "Fabric Group";
+      case "oauthGroup":
+        return "OAuth Group";
+      default:
+        return "Unknown type";
+    }
+  }
 
   @action.bound
   SetError(error) {
@@ -101,6 +128,17 @@ class RootStore {
 
     return result;
   };
+
+  @action.bound
+  AddSite = flow(function * ({libraryId, objectId}) {
+    const name = (yield this.client.ContentObjectMetadata({libraryId, objectId, metadataSubtree: "public/name"})) || objectId;
+
+    this.sites.push({
+      libraryId,
+      objectId,
+      name
+    });
+  });
 
   @action.bound
   AddTitle = flow(function * ({libraryId, objectId, defaultProfiles=true}) {
@@ -274,6 +312,7 @@ class RootStore {
     this.titlePermissions[objectId][address][key] = value;
   }
 
+  // Load information about a specific fabric group
   GroupInfo = flow(function * (address) {
     if(!this.groupCache[address]) {
       try {
@@ -306,7 +345,27 @@ class RootStore {
     return this.groupCache[address];
   });
 
-  async OAuthGroupInfo(id) {
+  // Retrieve OAuth user/group info
+
+  OAuthUserInfo(id) {
+    if(!this.oauthUsers) {
+      throw Error("OAuth user info missing");
+    }
+
+    const user = this.oauthUsers.find(user => user.address === id);
+
+    if(!user) {
+      throw Error("Unable to find user " + id);
+    }
+
+    return user;
+  }
+
+  OAuthGroupInfo(id) {
+    if(!this.oauthGroups) {
+      throw Error("OAuth group info missing");
+    }
+
     const group = this.oauthGroups.find(group => group.address === id);
 
     if(!group) {
@@ -316,14 +375,59 @@ class RootStore {
     return group;
   }
 
+  // Call wallet address to ensure user exists
+  @action.bound
+  ValidateUser = flow(function * (address) {
+    try {
+      if(yield this.client.userProfileClient.UserWalletAddress({address})) {
+        return true;
+      }
+
+      throw Error("No wallet");
+    } catch (error) {
+      return false;
+    }
+  });
+
+  // Add a new user/group to allUsers or allGroups
+
+  @action.bound
+  LoadUser = (address, type, name) => {
+    if(type === "fabricUser") {
+      address = this.client.utils.FormatAddress(address);
+
+      this.allUsers[address] = {
+        type,
+        name: name || address,
+        address
+      };
+    } else {
+      this.allUsers[address] = this.OAuthUserInfo(address);
+    }
+  };
+
   @action.bound
   LoadGroup = flow(function * (address, type) {
     if(type === "fabricGroup") {
       this.allGroups[address] = yield this.GroupInfo(address);
     } else {
-      this.allGroups[address] = yield this.OAuthGroupInfo(address);
+      this.allGroups[address] = this.OAuthGroupInfo(address);
     }
   });
+
+  // Page/Sort/Filter users and groups
+
+  @action.bound
+  LoadOAuthUsers = ({page=1, perPage=10, filter=""}) => {
+    const startIndex = (page - 1) * perPage;
+
+    const users = this.oauthUsers
+      .filter(user => !filter || user.name.toLowerCase().includes(filter.toLowerCase()) || user.address.includes(filter.toLowerCase()))
+      .sort((a, b) => a.name < b.name ? -1 : 1);
+
+    this.totalUsers = users.length;
+    this.userList = users.slice(startIndex, startIndex + perPage);
+  };
 
   @action.bound
   LoadGroups = flow(function * ({page=1, perPage=10, filter=""}) {
@@ -332,7 +436,7 @@ class RootStore {
 
     this.totalGroups = groupAddresses.length;
 
-    this.groupList = (
+    const groups = (
       yield this.client.utils.LimitedMap(
         10,
         groupAddresses,
@@ -344,8 +448,10 @@ class RootStore {
       )
     )
       .filter(group => !filter || group.name.toLowerCase().includes(filter.toLowerCase()) || group.address.includes(filter.toLowerCase()))
-      .sort((a, b) => a.name < b.name ? -1 : 1)
-      .slice(startIndex, startIndex + perPage);
+      .sort((a, b) => a.name < b.name ? -1 : 1);
+
+    this.totalGroups = groups.length;
+    this.groupList = groups.slice(startIndex, startIndex + perPage);
   });
 
   @action.bound
@@ -354,19 +460,21 @@ class RootStore {
 
     const startIndex = (page - 1) * perPage;
 
-    this.groupList = this.oauthGroups
-      .filter(group => !filter || group.name.toLowerCase().includes(filter.toLowerCase()) || group.address.includes(filter.toLowerCase()))
-      .slice(startIndex, startIndex + perPage);
+    const groups = this.oauthGroups
+      .filter(group => !filter || group.name.toLowerCase().includes(filter.toLowerCase()) || group.address.includes(filter.toLowerCase()));
+
+    this.totalGroups = groups.length;
+    this.groupList = groups.slice(startIndex, startIndex + perPage);
   };
 
   @action.bound
-  InitializeGroupTitlePermission(groupAddress, objectId, type) {
+  InitializeTitlePermission(address, objectId, type) {
     if(!this.titlePermissions[objectId]) {
       this.titlePermissions[objectId] = {};
     }
 
-    if(!this.titlePermissions[objectId][groupAddress]) {
-      this.titlePermissions[objectId][groupAddress] = {
+    if(!this.titlePermissions[objectId][address]) {
+      this.titlePermissions[objectId][address] = {
         type,
         profile: "default",
         startTime: undefined,
@@ -505,26 +613,28 @@ class RootStore {
 
       const writeToken = yield this.WriteToken();
 
-      const params = {libraryId: this.libraryId, objectId: this.objectId, writeToken};
+      const oauthInfo = {users, groups};
+
+      const partHash = (yield this.client.UploadPart({
+        libraryId: this.libraryId,
+        objectId: this.objectId,
+        writeToken,
+        encryption: "cgck",
+        data: Buffer.from(JSON.stringify(oauthInfo))
+      })).part.hash;
 
       yield this.client.ReplaceMetadata({
-        ...params,
-        metadataSubtree: "oauthSync/users",
-        metadata: users
-      });
-
-      yield this.client.ReplaceMetadata({
-        ...params,
-        metadataSubtree: "oauthSync/groups",
-        metadata: groups
+        libraryId: this.libraryId,
+        objectId: this.objectId,
+        writeToken,
+        metadataSubtree: "oauth_settings",
+        metadata: partHash
       });
 
       yield this.Finalize();
 
-
       this.oauthGroups = groups;
       this.oauthUsers = users;
-
 
       this.SetMessage("Successfully synced with OAuth");
       return true;
@@ -561,15 +671,36 @@ class RootStore {
 
   @action.bound
   Load = flow(function * () {
-    // OAuth Users and Groups
-    const oauthSync = yield this.client.ContentObjectMetadata({libraryId: this.libraryId, objectId: this.objectId, metadataSubtree: "oauthSync"});
+    const params = {libraryId: this.libraryId, objectId: this.objectId};
 
-    if(oauthSync) {
-      this.oauthUser = oauthSync.users;
+    // OAuth users and groups and fabric users
+    const oauthSyncHash = yield this.client.ContentObjectMetadata({...params, metadataSubtree: "oauth_settings"});
+
+    if(oauthSyncHash) {
+      let oauthSync = (yield this.client.DownloadPart({...params, partHash: oauthSyncHash, format: "text"}));
+      oauthSync = JSON.parse(Buffer.from(oauthSync));
+
+      this.oauthUsers = oauthSync.users;
       this.oauthGroups = oauthSync.groups;
     }
 
-    const authSpec = yield this.client.ContentObjectMetadata({libraryId: this.libraryId, objectId: this.objectId, metadataSubtree: "auth_policy_spec"});
+    const settings = yield this.client.ContentObjectMetadata({...params, metadataSubtree: "auth_policy_settings"});
+    if(settings) {
+      this.sites = yield Promise.all(
+        (settings.sites || []).map(async objectId => {
+          const libraryId = await this.client.ContentObjectLibraryId({objectId});
+          const name = (await this.client.ContentObjectMetadata({libraryId, objectId, metadataSubtree: "public/name"})) || objectId;
+
+          return {
+            libraryId,
+            objectId,
+            name
+          };
+        })
+      );
+    }
+
+    const authSpec = yield this.client.ContentObjectMetadata({...params, metadataSubtree: "auth_policy_spec"});
 
     if(!authSpec) { return; }
 
@@ -650,19 +781,32 @@ class RootStore {
         await Promise.all(
           (authSpec[titleId].permissions || []).map(async loadedPermissions => {
             const profile = loadedPermissions.profile;
-            await Promise.all(
-              (loadedPermissions.subjects || []).map(async subject => {
-                await this.LoadGroup(subject.id, subject.type);
+            let type = loadedPermissions.subject.type;
+            let id = loadedPermissions.subject.id;
+            if(type === "group") {
+              type = "fabricGroup";
+              id = this.client.utils.HashToAddress(id);
+              await this.LoadGroup(id, type);
+            } else if(type === "oauth_group") {
+              type = "oauthGroup";
+              await this.LoadGroup(id, type);
+            } else if(type === "user") {
+              type = "fabricUser";
+              id = this.client.utils.HashToAddress(id);
+              const name = this.SafeTraverse(settings, `fabricUsers/${id}/name`);
+              this.LoadUser(id, type, name);
+            } else if(type === "oauth_user") {
+              type = "oauthUser";
+              this.LoadUser(id, type);
+            }
 
-                this.titlePermissions[titleId][subject.id] = {
-                  type: subject.type,
-                  profile
-                };
+            this.titlePermissions[titleId][id] = {
+              type: type,
+              profile
+            };
 
-                if(subject.start) { this.titlePermissions[titleId][subject.id].startTime = DateTime.fromISO(subject.start).toMillis(); }
-                if(subject.end) { this.titlePermissions[titleId][subject.id].endTime = DateTime.fromISO(subject.end).toMillis(); }
-              })
-            );
+            if(loadedPermissions.start) { this.titlePermissions[titleId][id].startTime = DateTime.fromISO(loadedPermissions.start).toMillis(); }
+            if(loadedPermissions.end) { this.titlePermissions[titleId][id].endTime = DateTime.fromISO(loadedPermissions.end).toMillis(); }
           })
         );
       }
@@ -722,27 +866,30 @@ class RootStore {
           permissionSpec[titleId].profiles[profileName] = profileSpec;
         });
 
-
-        let profilePermissions = {};
-
         // Permissions
-        Object.keys(this.titlePermissions[titleId] || {}).map(id => {
+        permissionSpec[titleId].permissions = Object.keys(this.titlePermissions[titleId] || {}).map(id => {
           const permission = this.titlePermissions[titleId][id];
 
-          if(!profilePermissions[permission.profile]) { profilePermissions[permission.profile] = []; }
+          let type = permission.type;
+          if(type === "fabricGroup") {
+            type = "group";
+            id = `igrp${this.client.utils.AddressToHash(id)}`;
+          } else if(type === "oauthGroup") {
+            type = "oauth_group";
+          } else if(type === "fabricUser") {
+            type = "user";
+            id =`iusr${this.client.utils.AddressToHash(id)}`;
+          } else if(type === "oauthUser") {
+            type = "oauth_user";
+          }
 
-          let itemPermission = { id, type: permission.type };
+          let itemPermission = { profile: permission.profile, subject: { id, type } };
 
           if(permission.startTime) { itemPermission.start = DateTime.fromMillis(permission.startTime).toISODate(); }
           if(permission.endTime) { itemPermission.end = DateTime.fromMillis(permission.endTime).toISODate(); }
 
-          profilePermissions[permission.profile].push(itemPermission);
+          return itemPermission;
         });
-
-        permissionSpec[titleId].permissions = Object.keys(profilePermissions).map(profileName => ({
-          subjects: profilePermissions[profileName],
-          profile: profileName
-        }));
       });
 
       const writeToken = yield this.WriteToken();
@@ -753,6 +900,22 @@ class RootStore {
         writeToken,
         metadataSubtree: "auth_policy_spec",
         metadata: permissionSpec
+      });
+
+      let fabricUsers = {};
+      Object.values(this.allUsers)
+        .filter(user => user.type === "fabricUser")
+        .forEach(fabricUser => fabricUsers[fabricUser.address] = {name: fabricUser.name, address: fabricUser.address});
+
+      yield this.client.ReplaceMetadata({
+        libraryId: this.libraryId,
+        objectId: this.objectId,
+        writeToken,
+        metadataSubtree: "auth_policy_settings",
+        metadata: {
+          sites: this.sites.map(site => site.objectId),
+          fabricUsers
+        }
       });
 
       yield this.Finalize();

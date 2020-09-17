@@ -18,6 +18,7 @@ import AssetPermissions from "./components/permissions/AssetPermissions";
 import OfferingPermissions from "./components/permissions/OfferingPermissions";
 import Action from "elv-components-js/src/components/Action";
 import OAuthSettings from "./components/OAuthSettings";
+import Sites from "./components/Sites";
 
 if(typeof EluvioConfiguration === "undefined") {
   global.EluvioConfiguration = {};
@@ -60,6 +61,7 @@ class App extends React.Component {
           </Action>
         </header>
         <nav className="navigation-tabs -elv-tab-container">
+          <NavLink to="/sites" className="-elv-tab" activeClassName="selected">Sites</NavLink>
           <NavLink to="/titles" className="-elv-tab" activeClassName="selected">Titles</NavLink>
           <NavLink to="/users" className="-elv-tab" activeClassName="selected">Users</NavLink>
           <NavLink to="/groups" className="-elv-tab" activeClassName="selected">Groups</NavLink>
@@ -67,10 +69,14 @@ class App extends React.Component {
         </nav>
         <main>
           <Switch>
+            <Route exact path="/sites" component={Sites} />
+
             <Route exact path="/oauth" component={OAuthSettings} />
 
-            <Route exact path="/users" component={Users} />
             <Route exact path="/view" component={Titles} />
+
+            <Route exact path="/users" component={Users} />
+            <Route exact path="/users/:userType/:userAddress" component={Titles} />
 
             <Route exact path="/groups" component={Groups} />
             <Route exact path="/groups/:groupType/:groupAddress" component={Titles} />

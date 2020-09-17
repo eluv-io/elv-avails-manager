@@ -7,7 +7,7 @@ import {Link, Redirect} from "react-router-dom";
 import {BackButton, ChangeSort, SortableHeader} from "./Misc";
 import Path from "path";
 import AsyncComponent from "./AsyncComponent";
-import GroupPermissions from "./permissions/GroupPermissions";
+import TargetPermissions from "./permissions/TargetPermissions";
 
 @inject("rootStore")
 @observer
@@ -30,15 +30,25 @@ class Titles extends React.Component {
     this.ChangeSort = ChangeSort.bind(this);
   }
 
+  User() {
+    if(!this.props.match.params.userAddress) { return; }
+
+    return this.props.rootStore.allUsers[this.props.match.params.userAddress];
+  }
+
   Group() {
     if(!this.props.match.params.groupAddress) { return; }
 
     return this.props.rootStore.allGroups[this.props.match.params.groupAddress];
   }
 
+  Target() {
+    return this.Group() || this.User();
+  }
+
   TitleList() {
-    if(this.Group()) {
-      return <GroupPermissions groupAddress={this.Group().address} filter={this.state.filter} />;
+    if(this.Target()) {
+      return <TargetPermissions permissions={this.props.rootStore.targetTitlePermissions(this.Target().address)} target={this.Target()} filter={this.state.filter} />;
     }
 
     return (
@@ -47,7 +57,7 @@ class Titles extends React.Component {
           { this.SortableHeader("title", "Title")}
         </div>
         {
-          ( this.Group() ? this.props.rootStore.groupTitles(this.Group().address) : this.props.rootStore.titles )
+          ( this.Target() ? this.props.rootStore.targetTitles(this.Target().address) : this.props.rootStore.titles)
             .filter(({title}) => !this.state.filter || (title.toLowerCase().includes(this.state.filter.toLowerCase())))
             .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
             .map((title, index) =>
@@ -65,13 +75,12 @@ class Titles extends React.Component {
   }
 
   Content() {
-    const group = this.Group();
     return (
       <div className="page-container titles">
         { this.state.modal }
         <div className="page-header">
-          { group ? <BackButton to={Path.dirname(Path.dirname(this.props.location.pathname))} /> : null }
-          <h1>{ group ? `${group.name} | Title Permissions` : "All Titles"}</h1>
+          { this.Target() ? <BackButton to={Path.dirname(Path.dirname(this.props.location.pathname))} /> : null }
+          <h1>{ this.Target() ? `${this.Target().name} | Title Permissions` : "All Titles"}</h1>
         </div>
 
         <div className="controls">
@@ -92,7 +101,7 @@ class Titles extends React.Component {
             await this.props.rootStore.LoadGroup(this.props.match.params.groupAddress, this.props.match.params.groupType);
 
             await Promise.all(
-              this.props.rootStore.groupTitleIds(this.props.match.params.groupAddress).map(objectId =>
+              this.props.rootStore.targetTitleIds(this.props.match.params.groupAddress).map(objectId =>
                 this.props.rootStore.AddTitle({objectId})
               )
             );
@@ -110,8 +119,8 @@ class Titles extends React.Component {
     await this.props.rootStore.AddTitle(args);
     this.CloseModal();
 
-    if(this.Group()) {
-      this.props.rootStore.InitializeGroupTitlePermission(this.Group().address, args.objectId, this.Group().type);
+    if(this.Target()) {
+      this.props.rootStore.InitializeTitlePermission(this.Target().address, args.objectId, this.Target().type);
     } else {
       this.setState({
         modal: <Redirect to={UrlJoin(this.props.location.pathname, args.objectId)} />

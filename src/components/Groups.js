@@ -67,7 +67,7 @@ class GroupBrowser extends React.Component {
   }
 
   render() {
-    const totalGroups = this.props.oauth ? this.props.rootStore.totalOAuthGroups : this.props.rootStore.totalGroups;
+    const totalGroups = this.props.rootStore.totalGroups;
     const startIndex = (this.state.page - 1) * this.state.perPage + 1;
     return (
       <div className="group-browser">
@@ -107,7 +107,9 @@ class GroupBrowser extends React.Component {
 }
 
 GroupBrowser.propTypes = {
-  oauth: PropTypes.bool.isRequired
+  oauth: PropTypes.bool.isRequired,
+  onComplete: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired
 };
 
 
@@ -137,7 +139,7 @@ class Groups extends React.Component {
       <div className="page-container groups-page">
         { this.state.modal }
         <div className="page-header">
-          <h1>Access Groups</h1>
+          <h1>Groups</h1>
         </div>
 
         <div className="controls">
@@ -170,9 +172,9 @@ class Groups extends React.Component {
                       onClick={() => this.props.onSelect(address, type)}
                     >
                       <div title={address}>{ name }</div>
-                      <div title={type}>{ type === "fabricGroup" ? "Fabric" : "OAuth" }</div>
+                      <div title={type}>{ this.props.rootStore.FormatType(type) }</div>
                       <div className="small-font">{ description }</div>
-                      <div>{ this.props.rootStore.groupTitles(address).length }</div>
+                      <div>{ this.props.rootStore.targetTitles(address).length }</div>
                     </div>
                   );
                 }
@@ -184,9 +186,9 @@ class Groups extends React.Component {
                     className={`list-entry groups-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
                   >
                     <div title={address}>{ name }</div>
-                    <div title={type}>{ type === "fabricGroup" ? "Fabric" : "OAuth" }</div>
+                    <div title={type}>{ this.props.rootStore.FormatType(type) }</div>
                     <div>{ description }</div>
-                    <div>{ this.props.rootStore.groupTitles(address).length }</div>
+                    <div>{ this.props.rootStore.targetTitles(address).length }</div>
                   </Link>
                 );
               })
