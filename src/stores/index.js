@@ -156,6 +156,11 @@ class RootStore {
   });
 
   @action.bound
+  RemoveSite(objectId) {
+    this.sites = this.sites.filter(site => site.objectId !== objectId);
+  }
+
+  @action.bound
   AddTitle = flow(function * ({libraryId, objectId, defaultProfiles=true}) {
     if(this.allTitles[objectId]) { return; }
 
@@ -226,6 +231,13 @@ class RootStore {
 
     return this.allTitles[objectId];
   });
+
+  @action.bound
+  RemoveTitle(objectId) {
+    delete this.allTitles[objectId];
+    delete this.titlePermissions[objectId];
+    delete this.titleProfiles[objectId];
+  }
 
   @action.bound
   LoadFullTitle = flow(function * ({objectId, defaultProfiles=true}) {
@@ -407,7 +419,7 @@ class RootStore {
   // Add a new user/group to allUsers or allGroups
 
   @action.bound
-  LoadUser = (address, type, name) => {
+  LoadUser(address, type, name) {
     if(type === "fabricUser") {
       address = this.client.utils.FormatAddress(address);
 
@@ -419,7 +431,7 @@ class RootStore {
     } else {
       this.allUsers[address] = this.OAuthUserInfo(address);
     }
-  };
+  }
 
   @action.bound
   LoadGroup = flow(function * (address, type) {
@@ -483,6 +495,18 @@ class RootStore {
   };
 
   @action.bound
+  RemoveTarget(address) {
+    delete this.allUsers[address];
+    delete this.allGroups[address];
+    delete this.allOAuthGroups[address];
+
+    // Iterate through title permissions
+    Object.keys(this.titlePermissions).forEach(objectId =>
+      this.RemoveTitlePermission({objectId, address})
+    );
+  }
+
+  @action.bound
   InitializeTitlePermission(address, objectId, type) {
     if(!this.titlePermissions[objectId]) {
       this.titlePermissions[objectId] = {};
@@ -497,6 +521,15 @@ class RootStore {
       };
     }
   }
+
+  @action.bound
+  RemoveTitlePermission(objectId, address) {
+    if(this.titlePermissions[objectId]) {
+      delete this.titlePermissions[objectId][address];
+    }
+  }
+
+  // Misc
 
   @action.bound
   // eslint-disable-next-line require-yield

@@ -103,6 +103,7 @@ class Title extends React.Component {
           <div>Offerings</div>
           <div>Start Time</div>
           <div>End Time</div>
+          <div />
         </div>
         {
           Object.keys(this.props.rootStore.titleProfiles[this.Title().objectId]).map((profile, index) =>

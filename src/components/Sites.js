@@ -2,7 +2,7 @@ import React from "react";
 import {Action, Modal} from "elv-components-js";
 import ContentBrowser from "./ContentBrowser";
 import {inject, observer} from "mobx-react";
-import {ChangeSort, SortableHeader} from "./Misc";
+import {ChangeSort, DeleteButton, SortableHeader} from "./Misc";
 
 @inject("rootStore")
 @observer
@@ -29,6 +29,7 @@ class Sites extends React.Component {
       <div className="list sites-list">
         <div className="list-entry sites-list-entry list-header sites-list-header">
           { this.SortableHeader("name", "Name")}
+          <div />
         </div>
         {
           this.props.rootStore.sites
@@ -40,6 +41,13 @@ class Sites extends React.Component {
                 className={`list-entry sites-list-entry ${index % 2 === 0 ? "even" : "odd"}`}
               >
                 <div>{ site.name }</div>
+                <div className="actions-cell">
+                  <DeleteButton
+                    title={`Remove ${site.name}`}
+                    Delete={() => this.props.rootStore.RemoveSite(site.objectId)}
+                    confirm="Are you sure you want to remove this site?"
+                  />
+                </div>
               </div>
             )
         }

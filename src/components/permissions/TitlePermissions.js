@@ -2,7 +2,7 @@ import React from "react";
 import {inject, observer} from "mobx-react";
 import PropTypes from "prop-types";
 
-import {ChangeSort, EffectiveAvailability, SortableHeader} from "../Misc";
+import {ChangeSort, DeleteButton, EffectiveAvailability, SortableHeader} from "../Misc";
 import {Action, DateSelection, Modal} from "elv-components-js";
 import {toJS} from "mobx";
 import {withRouter} from "react-router";
@@ -21,6 +21,7 @@ class TitlePermissions extends React.Component {
       filter: "",
       sortKey: "name",
       sortAsc: true,
+      key: 1
     };
 
     this.AddPermission = this.AddPermission.bind(this);
@@ -32,14 +33,15 @@ class TitlePermissions extends React.Component {
   }
 
   render() {
-    const permissions = toJS({
-      ...this.props.rootStore.titlePermissions[this.props.objectId],
+    const titlePermissions = this.props.rootStore.titlePermissions[this.props.objectId] || {};
+    const sortablePermissions = toJS({
+      ...titlePermissions
     });
 
-    Object.keys(permissions).forEach(addr => permissions[addr] = { ...permissions[addr], ...(this.props.rootStore.allGroups[addr] || {})});
+    Object.keys(sortablePermissions).forEach(addr => sortablePermissions[addr] = { ...sortablePermissions[addr], ...(this.props.rootStore.allGroups[addr] || {})});
 
     return (
-      <div className="list title-profile-list">
+      <div className="list title-profile-list" key={`title-profile-list-${this.state.key}`}>
         { this.state.modal }
         <div className="controls">
           <Action onClick={() => this.ActivateModal(false)}>Add User Permission</Action>
@@ -52,14 +54,15 @@ class TitlePermissions extends React.Component {
           { this.SortableHeader("startTime", "Start Time") }
           { this.SortableHeader("endTime", "End Time") }
           <div>Availability</div>
+          <div />
         </div>
         {
-          Object.keys(this.props.rootStore.titlePermissions[this.props.objectId] || {})
-            .sort((addrA, addrB) => permissions[addrA][this.state.sortKey] < permissions[addrB][this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
+          Object.keys(titlePermissions)
+            .sort((addrA, addrB) => sortablePermissions[addrA][this.state.sortKey] < sortablePermissions[addrB][this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
             .filter(address => !this.state.filter || (this.props.rootStore.allGroups[address] || this.props.rootStore.allUsers[address]).name.toLowerCase().includes(this.state.filter))
             .map((address, index) => {
               const target = this.props.rootStore.allGroups[address] || this.props.rootStore.allUsers[address];
-              const permissions = this.props.rootStore.titlePermissions[this.props.objectId][address];
+              const permissions = titlePermissions[address];
               const Update = (key, value) => this.props.rootStore.SetTitlePermissionAccess(this.props.objectId, address, key, value);
               const profile = this.props.rootStore.titleProfiles[this.props.objectId][permissions.profile];
 
@@ -103,6 +106,17 @@ class TitlePermissions extends React.Component {
                   </div>
                   <div className="small-font">
                     { EffectiveAvailability([profile.startTime, permissions.startTime], [profile.endTime, permissions.endTime])}
+                  </div>
+                  <div className="actions-cell">
+                    <DeleteButton
+                      confirm="Are you sure you want to remove this permission?"
+                      title={`Remove ${permissions.name}`}
+                      Delete={() => {
+                        this.props.rootStore.RemoveTitlePermission(this.props.objectId, address);
+                        // TODO: Figure out why this doesn't update properly
+                        this.setState({key: this.state.key + 1});
+                      }}
+                    />
                   </div>
                 </div>
               );

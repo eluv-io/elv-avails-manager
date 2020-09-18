@@ -6,7 +6,7 @@ import {Link} from "react-router-dom";
 import PropTypes from "prop-types";
 import {Action, LabelledField, LoadingElement, Modal} from "elv-components-js";
 
-import {ChangeSort, SortableHeader} from "./Misc";
+import {ChangeSort, DeleteButton, SortableHeader} from "./Misc";
 
 @inject("rootStore")
 @observer
@@ -179,6 +179,7 @@ class Users extends React.Component {
         { this.state.modal }
         <div className="page-header">
           <h1>Users</h1>
+          <div />
         </div>
 
         <div className="controls">
@@ -192,16 +193,25 @@ class Users extends React.Component {
           <input className="filter" name="filter" value={this.state.filter} onChange={event => this.setState({filter: event.target.value})} placeholder="Filter Users..."/>
         </div>
         <div className="list">
-          <div className="list-entry list-header users-list-entry">
+          <div className={`list-entry list-header users-list-entry ${this.props.selectable ? "list-entry-selectable" : ""}`}>
             { this.SortableHeader("name", "Name") }
             { this.SortableHeader("type", "Type") }
             <div>Titles</div>
+            { this.props.selectable ? null : <div /> }
           </div>
           {
             Object.values(this.props.rootStore.allUsers)
               .filter(({name}) => !this.state.filter || (name.toLowerCase().includes(this.state.filter.toLowerCase())))
               .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
               .map(({type, address, name}, i) => {
+                const contents = (
+                  <React.Fragment>
+                    <div title={address}>{ name }</div>
+                    <div title={type}>{ this.props.rootStore.FormatType(type) }</div>
+                    <div>{ this.props.rootStore.targetTitles(address).length }</div>
+                  </React.Fragment>
+                );
+
                 if(this.props.selectable) {
                   return (
                     <div
@@ -209,9 +219,7 @@ class Users extends React.Component {
                       className={`list-entry list-entry-selectable users-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
                       onClick={() => this.props.onSelect(address, type)}
                     >
-                      <div title={address}>{ name }</div>
-                      <div title={type}>{ this.props.rootStore.FormatType(type) }</div>
-                      <div>{ this.props.rootStore.targetTitles(address).length }</div>
+                      {contents}
                     </div>
                   );
                 }
@@ -222,9 +230,14 @@ class Users extends React.Component {
                     key={`users-${address}`}
                     className={`list-entry users-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
                   >
-                    <div title={address}>{ name }</div>
-                    <div title={type}>{ this.props.rootStore.FormatType(type) }</div>
-                    <div>{ this.props.rootStore.targetTitles(address).length }</div>
+                    { contents }
+                    <div className="actions-cell">
+                      <DeleteButton
+                        confirm="Are you sure you want to remove this user?"
+                        title={`Remove ${name}`}
+                        Delete={() => this.props.rootStore.RemoveTarget(address)}
+                      />
+                    </div>
                   </Link>
                 );
               })

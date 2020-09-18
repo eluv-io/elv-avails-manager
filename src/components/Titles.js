@@ -4,7 +4,7 @@ import ContentBrowser from "./ContentBrowser";
 import {inject, observer} from "mobx-react";
 import UrlJoin from "url-join";
 import {Link, Redirect} from "react-router-dom";
-import {BackButton, ChangeSort, SortableHeader} from "./Misc";
+import {BackButton, ChangeSort, DeleteButton, SortableHeader} from "./Misc";
 import Path from "path";
 import AsyncComponent from "./AsyncComponent";
 import TargetPermissions from "./permissions/TargetPermissions";
@@ -55,9 +55,11 @@ class Titles extends React.Component {
       <div className="list titles-list">
         <div className="list-entry titles-list-entry list-header titles-list-header">
           { this.SortableHeader("title", "Title")}
+          <div>Permissions</div>
+          <div />
         </div>
         {
-          ( this.Target() ? this.props.rootStore.targetTitles(this.Target().address) : this.props.rootStore.titles)
+          this.props.rootStore.titles
             .filter(({title}) => !this.state.filter || (title.toLowerCase().includes(this.state.filter.toLowerCase())))
             .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
             .map((title, index) =>
@@ -67,6 +69,14 @@ class Titles extends React.Component {
                 className={`list-entry titles-list-entry ${index % 2 === 0 ? "even" : "odd"}`}
               >
                 <div>{ title.title }</div>
+                <div>{ Object.keys(this.props.rootStore.titlePermissions[title.objectId] || {}).length }</div>
+                <div className="actions-cell">
+                  <DeleteButton
+                    confirm="Are you sure you want to remove this title?"
+                    title={`Remove ${title.title}`}
+                    Delete={() => this.props.rootStore.RemoveTitle(title.objectId)}
+                  />
+                </div>
               </Link>
             )
         }

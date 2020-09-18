@@ -7,6 +7,7 @@ import UrlJoin from "url-join";
 import {Link} from "react-router-dom";
 
 import SettingsIcon from "../../static/icons/settings.svg";
+import {DeleteButton} from "../Misc";
 
 @inject("rootStore")
 @observer
@@ -66,7 +67,6 @@ class TitleProfile extends React.Component {
     return (
       <React.Fragment>
         <select
-          disabled={this.props.profile === "default"}
           value={value}
           onChange={event => this.Update(key, event.target.value)}
         >
@@ -100,6 +100,13 @@ class TitleProfile extends React.Component {
               noLabel
               value={this.PermissionInfo().endTime}
               onChange={dateTime => this.Update("endTime", dateTime)}
+            />
+          </div>
+          <div className="actions-cell">
+            <DeleteButton
+              confirm="Are you sure you want to remove this profile?"
+              title={`Remove ${this.props.profile}`}
+              Delete={() => this.props.rootStore.RemoveTitleProfile(this.props.objectId, this.props.profile)}
             />
           </div>
         </div>

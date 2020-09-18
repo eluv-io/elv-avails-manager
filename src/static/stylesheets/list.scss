@@ -30,6 +30,7 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
     align-items: center;
     border: 1px solid $elv-color-lightgray;
     border-bottom: 0;
+    border-left: 0;
     border-right: 0;
 
     display: flex;
@@ -39,6 +40,10 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 
     span {
       @include elv-ellipsis;
+    }
+
+    &:first-child {
+      border-left: 1px solid $elv-color-lightgray;
     }
 
     &:last-child {
@@ -108,6 +113,21 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
     }
   }
 
+  .actions-cell {
+    display: flex;
+    justify-content: flex-end;
+
+    button {
+      padding: $elv-spacing-xxs $elv-spacing-xs;
+
+      &:hover {
+        svg {
+          stroke: $elv-color-black;
+        }
+      }
+    }
+  }
+
   // Stacking context prevents datepicker from sitting above list - make it relative to the list entry instead
   .rdt {
     position: inherit;
@@ -145,7 +165,7 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 }
 
 .titles-list-entry {
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 8rem 5rem;
 }
 
 .assets-list-entry {
@@ -165,11 +185,11 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 }
 
 .title-profile-list-entry {
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 5rem;
 }
 
 .title-permission-list-entry {
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 5rem;
 }
 
 .groups-browse-list-entry {
@@ -177,7 +197,11 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 }
 
 .groups-list-entry {
-  grid-template-columns: 2fr 1fr 3fr 1fr;
+  grid-template-columns: 2fr 1fr 3fr 6rem 5rem;
+
+  &.list-entry-selectable {
+    grid-template-columns: 2fr 1fr 3fr 6rem;
+  }
 }
 
 .group-titles-list-entry {
@@ -185,9 +209,13 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 }
 
 .sites-list-entry {
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 5rem;
 }
 
 .users-list-entry {
-  grid-template-columns: 3fr 2fr 1fr;
+  grid-template-columns: 3fr 2fr 6rem 5rem;
+
+  &.list-entry-selectable {
+    grid-template-columns: 3fr 2fr 6rem;
+  }
 }

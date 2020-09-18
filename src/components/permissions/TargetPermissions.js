@@ -5,7 +5,7 @@ import {withRouter} from "react-router";
 import {Link} from "react-router-dom";
 import UrlJoin from "url-join";
 
-import {ChangeSort, EffectiveAvailability, SortableHeader} from "../Misc";
+import {ChangeSort, DeleteButton, EffectiveAvailability, SortableHeader} from "../Misc";
 import {DateSelection, ImageIcon} from "elv-components-js";
 import LinkIcon from "../../static/icons/link.svg";
 
@@ -34,6 +34,7 @@ class TargetPermissions extends React.Component {
           { this.SortableHeader("startTime", "Start Time") }
           { this.SortableHeader("endTime", "End Time") }
           <div>Availability</div>
+          <div />
         </div>
         {
           this.props.permissions
@@ -83,6 +84,13 @@ class TargetPermissions extends React.Component {
                   </div>
                   <div className="small-font">
                     { EffectiveAvailability([profile.startTime, titlePermission.startTime], [profile.endTime, titlePermission.endTime])}
+                  </div>
+                  <div className="actions-cell">
+                    <DeleteButton
+                      confirm="Are you sure you want to remove this title?"
+                      title={`Remove ${titlePermission.name}`}
+                      Delete={() => this.props.rootStore.RemoveTitlePermission({objectId: titlePermission.objectId, address: this.props.target.address})}
+                    />
                   </div>
                 </div>
               );
