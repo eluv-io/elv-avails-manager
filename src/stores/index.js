@@ -85,6 +85,13 @@ class RootStore {
     ).get();
   };
 
+  constructor() {
+    this.contentStore = new ContentStore(this);
+
+    window.rootStore = this;
+  }
+
+
   FormatType(type) {
     switch (type) {
       case "fabricUser":
@@ -131,6 +138,14 @@ class RootStore {
 
   @action.bound
   AddSite = flow(function * ({libraryId, objectId}) {
+    const searchLink = (yield this.client.ContentObjectMetadata({libraryId, objectId, metadataSubtree: "public/search"}));
+
+    if(!searchLink) {
+      throw Error("Site must have search index");
+    } else if(this.sites.find(site => site.objectId === objectId)) {
+      return;
+    }
+
     const name = (yield this.client.ContentObjectMetadata({libraryId, objectId, metadataSubtree: "public/name"})) || objectId;
 
     this.sites.push({
@@ -481,12 +496,6 @@ class RootStore {
         endTime: undefined
       };
     }
-  }
-
-  constructor() {
-    this.contentStore = new ContentStore(this);
-
-    window.rootStore = this;
   }
 
   @action.bound

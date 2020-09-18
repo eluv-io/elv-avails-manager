@@ -65,7 +65,7 @@ class App extends React.Component {
           <NavLink to="/titles" className="-elv-tab" activeClassName="selected">Titles</NavLink>
           <NavLink to="/users" className="-elv-tab" activeClassName="selected">Users</NavLink>
           <NavLink to="/groups" className="-elv-tab" activeClassName="selected">Groups</NavLink>
-          <NavLink to="/oauth" className="-elv-tab" activeClassName="selected">OAuth</NavLink>
+          <NavLink to="/oauth" className="-elv-tab" activeClassName="selected">Settings</NavLink>
         </nav>
         <main>
           <Switch>

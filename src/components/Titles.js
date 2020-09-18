@@ -132,11 +132,12 @@ class Titles extends React.Component {
     this.setState({
       modal: (
         <Modal
-          className="asset-form-modal fullscreen-modal"
+          className="asset-form-modal"
           closable={true}
           OnClickOutside={this.CloseModal}
         >
           <ContentBrowser
+            site={true}
             header="Select a Title"
             onComplete={this.AddTitle}
             onCancel={this.CloseModal}

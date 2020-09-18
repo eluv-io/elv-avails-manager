@@ -14,9 +14,53 @@ class ContentStore {
   @observable mimeTypes = {};
   @observable playoutOptions = {};
 
+  @observable sitePaginationInfo = {items: 0, limit: 10};
+  @observable siteTitles = [];
+
   constructor(rootStore) {
     this.rootStore = rootStore;
   }
+
+  @action.bound
+  LoadSiteTitles = flow(function * ({siteId, page=1, perPage=10, filter=""}) {
+    const site = this.rootStore.sites.find(site => site.objectId === siteId);
+
+    if(!site) { throw Error("Site not found"); }
+
+    const client = this.rootStore.client;
+
+    const initialNodes = yield client.Nodes();
+    try {
+      yield client.SetNodes({
+        fabricURIs: EluvioConfiguration.searchNodes
+      });
+
+      const startIndex = (page - 1) * perPage;
+      const {pagination, results} = yield client.LinkData({
+        libraryId: site.libraryId,
+        objectId: site.objectId,
+        linkPath: "public/search",
+        queryParams: {
+          select: ["public/asset_metadata/title", "public/asset_metadata/display_title"],
+          terms: `(f_title_type:title AND f_asset_type:primary${filter ? ` AND f_display_title:${filter}`: ""})`,
+          start: startIndex,
+          limit: perPage
+        }
+      });
+
+      this.sitePaginationInfo = {
+        items: pagination.total,
+        limit: perPage
+      };
+
+      this.siteTitles = results.map(title => ({
+        name: this.rootStore.SafeTraverse(title, "meta/public/asset_metadata/title") || this.rootStore.SafeTraverse(title, "meta/public/asset_metadata/display_title"),
+        id: title.id
+      }));
+    } finally {
+      yield client.SetNodes(initialNodes);
+    }
+  });
 
   @action.bound
   LoadLibraries = flow(function * () {

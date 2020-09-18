@@ -77,11 +77,12 @@ class Sites extends React.Component {
     this.setState({
       modal: (
         <Modal
-          className="asset-form-modal fullscreen-modal"
+          className="asset-form-modal"
           closable={true}
           OnClickOutside={this.CloseModal}
         >
           <ContentBrowser
+            site={false}
             header="Select a Site"
             titleTypes={["site"]}
             onComplete={this.AddSite}

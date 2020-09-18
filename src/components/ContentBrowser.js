@@ -4,7 +4,7 @@ import React from "react";
 import AsyncComponent from "./AsyncComponent";
 import {inject, observer} from "mobx-react";
 import PropTypes from "prop-types";
-import {Action, LoadingElement, Maybe} from "elv-components-js";
+import {Action, LoadingElement, Maybe, Tabs} from "elv-components-js";
 
 @observer
 class BrowserList extends React.Component {
@@ -45,7 +45,7 @@ class BrowserList extends React.Component {
             Previous
           </Action>
         )}
-        Page {this.state.page} of {pages}
+        Page {this.state.page} of {Math.max(pages, 1)}
         {Maybe(
           this.state.page < pages,
           <Action className="secondary next-button" onClick={() => ChangePage(this.state.page + 1)}>
@@ -148,7 +148,10 @@ BrowserList.propTypes = {
   list: PropTypes.arrayOf(
     PropTypes.shape({
       name: PropTypes.string,
-      id: PropTypes.string
+      id: PropTypes.oneOfType([
+        PropTypes.string,
+        PropTypes.number
+      ])
     })
   ),
   hashes: PropTypes.bool,
@@ -157,9 +160,11 @@ BrowserList.propTypes = {
   Load: PropTypes.func.isRequired,
   Select: PropTypes.func.isRequired,
   paginated: PropTypes.bool,
-  paginationInfo: PropTypes.object
+  paginationInfo: PropTypes.object,
+  totalItems: PropTypes.number
 };
 
+@inject("rootStore")
 @inject("contentStore")
 @observer
 class ContentBrowser extends React.Component {
@@ -168,14 +173,16 @@ class ContentBrowser extends React.Component {
 
     this.state = {
       libraryId: undefined,
-      objectId: undefined
+      objectId: undefined,
+      error: "",
+      siteIndex: undefined,
+      tab: this.props.site && this.props.rootStore.sites.length > 0 ? "site" : "all"
     };
   }
 
-  render() {
-    let content;
+  Content() {
     if(!this.state.libraryId) {
-      content = (
+      return (
         <React.Fragment>
           <div className="content-browser-actions">
             <Action
@@ -187,7 +194,7 @@ class ContentBrowser extends React.Component {
           </div>
           <BrowserList
             key="browser-list-libraries"
-            header="Choose a library"
+            header="Select a library"
             list={this.props.contentStore.libraries}
             Load={this.props.contentStore.LoadLibraries}
             Select={libraryId => this.setState({libraryId})}
@@ -201,7 +208,7 @@ class ContentBrowser extends React.Component {
 
       let list = this.props.contentStore.objects[this.state.libraryId] || [];
 
-      content = (
+      return (
         <React.Fragment>
           <div className="content-browser-actions">
             <Action
@@ -234,10 +241,18 @@ class ContentBrowser extends React.Component {
             })}
             Select={async objectId => {
               if(this.props.objectOnly) {
-                await this.props.onComplete({
-                  libraryId: this.state.libraryId,
-                  objectId
-                });
+                try {
+                  this.setState({error: ""});
+
+                  await this.props.onComplete({
+                    libraryId: this.state.libraryId,
+                    objectId
+                  });
+                } catch (error) {
+                  this.setState({error: error.message || error});
+
+                  setTimeout(() => this.setState({error: ""}), 6000);
+                }
               } else {
                 this.setState({objectId});
               }
@@ -251,7 +266,7 @@ class ContentBrowser extends React.Component {
       const object = this.props.contentStore.objects[this.state.libraryId]
         .find(({objectId}) => objectId === this.state.objectId);
 
-      content = (
+      return (
         <React.Fragment>
           <div className="content-browser-actions">
             <Action
@@ -269,7 +284,7 @@ class ContentBrowser extends React.Component {
           </div>
           <BrowserList
             key={`browser-list-${this.state.objectId}`}
-            header="Choose a version"
+            header="Select a version"
             subHeader={<React.Fragment><div>{library.name}</div><div>{object.name}</div></React.Fragment>}
             list={this.props.contentStore.versions[this.state.objectId]}
             hashes={true}
@@ -284,17 +299,56 @@ class ContentBrowser extends React.Component {
         </React.Fragment>
       );
     }
+  }
 
+  Site() {
+    if(typeof this.state.siteIndex === "undefined") {
+      return (
+        <BrowserList
+          key="site-browser"
+          header="Select a Site"
+          Load={() => {}}
+          list={this.props.rootStore.sites.map((site, i) => ({name: site.name, id: i}))}
+          Select={index => this.setState({siteIndex: index})}
+        />
+      );
+    } else {
+      return (
+        <BrowserList
+          key={`site-browser-${this.state.siteIndex}`}
+          header={"Select a Title"}
+          Load={args => this.props.contentStore.LoadSiteTitles({siteId: this.props.rootStore.sites[this.state.siteIndex].objectId, ...args})}
+          list={this.props.contentStore.siteTitles}
+          paginated
+          paginationInfo={this.props.contentStore.sitePaginationInfo}
+          Select={objectId => this.props.onComplete({objectId})}
+        />
+      );
+    }
+  }
+
+  render() {
     return (
       <div className="content-browser">
         <h2>{this.props.header}</h2>
-        { content }
+        {
+          this.props.site && this.props.rootStore.sites.length > 0 ?
+            <Tabs className="secondary" selected={this.state.tab} onChange={tab => this.setState({tab, siteIndex: undefined})} options={[["Site", "site"], ["All", "all"]]} /> :
+            null
+        }
+        <div key={this.state.error} className="message error-message">{ this.state.error }</div>
+        {
+          this.state.tab === "all" ?
+            this.Content() :
+            this.Site()
+        }
       </div>
     );
   }
 }
 
 ContentBrowser.propTypes = {
+  site: PropTypes.bool,
   header: PropTypes.string,
   assetTypes: PropTypes.arrayOf(PropTypes.string),
   titleTypes: PropTypes.arrayOf(PropTypes.string),

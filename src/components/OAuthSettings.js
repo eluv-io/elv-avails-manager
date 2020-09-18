@@ -32,7 +32,7 @@ class OAuthSettings extends React.Component {
         <LabelledField label="Okta Domain">
           <input
             required
-            placeholder="https://${OktaDomain}"
+            placeholder="https://<OktaDomain>"
             value={this.props.rootStore.oauthSettings.domain}
             onChange={event => this.props.rootStore.SetOAuthSetting("domain", event.target.value)}
           />

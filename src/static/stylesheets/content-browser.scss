@@ -7,8 +7,18 @@
   margin-bottom: $elv-spacing-l;
   min-height: 80vh;
 
+  .message {
+    height: 2rem;
+  }
+
   .-elv-async-component-loading {
     min-height: 10rem;
+  }
+
+  .-elv-tab-container {
+    &.secondary {
+      margin: 0;
+    }
   }
 
   .browser-container {
