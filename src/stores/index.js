@@ -1,4 +1,4 @@
-import {configure, observable, action, computed, flow} from "mobx";
+import {configure, observable, action, computed, flow, runInAction} from "mobx";
 import {DateTime} from "luxon";
 import URI from "urijs";
 import {Buffer} from "buffer";
@@ -59,31 +59,26 @@ class RootStore {
       .sort((a, b) => a.title < b.title ? -1 : 1);
   }
 
-  targetTitleIds = (address) => {
-    return computed(() =>
-      Object.keys(this.titlePermissions || {})
-        .filter(objectId => this.titlePermissions[objectId][address])
-    ).get();
-  };
+  targetTitleIds(address) {
+    return Object.keys(this.titlePermissions || {})
+      .filter(objectId => this.titlePermissions[objectId][address]);
+  }
 
-  targetTitles = (address) => {
+  targetTitles(address) {
     const titleIds = new Set(this.targetTitleIds(address));
-    return computed(() =>
-      Object.values(this.allTitles)
-        .filter(title => titleIds.has(title.objectId))
-        .sort((a, b) => a.title < b.title ? -1 : 1)
-    ).get();
-  };
 
-  targetTitlePermissions = (address) => {
-    return computed(() =>
-      this.targetTitleIds(address).map(id => ({
-        objectId: id,
-        name: this.allTitles[id].metadata.public.name,
-        ...this.titlePermissions[id][address]
-      }))
-    ).get();
-  };
+    return Object.values(this.allTitles)
+      .filter(title => titleIds.has(title.objectId))
+      .sort((a, b) => a.title < b.title ? -1 : 1);
+  }
+
+  targetTitlePermissions(address) {
+    return this.targetTitleIds(address).map(id => ({
+      objectId: id,
+      name: this.allTitles[id].metadata.public.name,
+      ...this.titlePermissions[id][address]
+    }));
+  }
 
   constructor() {
     this.contentStore = new ContentStore(this);
@@ -445,7 +440,7 @@ class RootStore {
   // Page/Sort/Filter users and groups
 
   @action.bound
-  LoadOAuthUsers = ({page=1, perPage=10, filter=""}) => {
+  LoadOAuthUsers({page=1, perPage=10, filter=""}) {
     const startIndex = (page - 1) * perPage;
 
     const users = this.oauthUsers
@@ -454,7 +449,7 @@ class RootStore {
 
     this.totalUsers = users.length;
     this.userList = users.slice(startIndex, startIndex + perPage);
-  };
+  }
 
   @action.bound
   LoadGroups = flow(function * ({page=1, perPage=10, filter=""}) {
@@ -482,7 +477,7 @@ class RootStore {
   });
 
   @action.bound
-  LoadOAuthGroups = ({page=1, perPage=10, filter=""}) => {
+  LoadOAuthGroups({page=1, perPage=10, filter=""}) {
     if(!this.oauthGroups) { return; }
 
     const startIndex = (page - 1) * perPage;
@@ -492,7 +487,7 @@ class RootStore {
 
     this.totalGroups = groups.length;
     this.groupList = groups.slice(startIndex, startIndex + perPage);
-  };
+  }
 
   @action.bound
   RemoveTarget(address) {
@@ -626,7 +621,7 @@ class RootStore {
       queryParams: {API_KEY: this.oauthSettings.adminToken, API: path}
     });
 
-    const result = JSON.parse((await (await fetch(proxyUrl)).json()).body);
+    const result = JSON.parse(atob((await (await fetch(proxyUrl)).json()).body));
 
     if(result.errorCode) {
       throw Error(result);
@@ -657,6 +652,12 @@ class RootStore {
 
       const oauthInfo = {users, groups};
 
+      const existingPart = yield this.client.ContentObjectMetadata({
+        libraryId: this.libraryId,
+        objectId: this.objectId,
+        metadataSubtree: "oauth_settings"
+      });
+
       const partHash = (yield this.client.UploadPart({
         libraryId: this.libraryId,
         objectId: this.objectId,
@@ -672,6 +673,15 @@ class RootStore {
         metadataSubtree: "oauth_settings",
         metadata: partHash
       });
+
+      if(existingPart) {
+        yield this.client.DeletePart({
+          libraryId: this.libraryId,
+          objectId: this.objectId,
+          writeToken,
+          partHash: existingPart
+        });
+      }
 
       yield this.Finalize();
 
@@ -752,71 +762,87 @@ class RootStore {
       async titleId => {
         await this.LoadFullTitle({objectId: titleId, defaultProfiles: false});
 
-        // Make asset map to look up assets
-        let titleAssetMap = {};
-        (this.allTitles[titleId].assets || []).forEach(asset => titleAssetMap[asset.assetKey] = asset);
+        runInAction(() => {
+          // Make asset map to look up assets
+          let titleAssetMap = {};
+          (this.allTitles[titleId].assets || []).forEach(asset => titleAssetMap[asset.assetKey] = asset);
 
-        const profiles = Object.keys(authSpec[titleId].profiles);
-        for(let i = 0; i < profiles.length; i++) {
-          const profileName = profiles[i];
-          const profile = authSpec[titleId].profiles[profileName];
+          const profiles = Object.keys(authSpec[titleId].profiles);
+          for(let i = 0; i < profiles.length; i++) {
+            const profileName = profiles[i];
+            const profile = authSpec[titleId].profiles[profileName];
 
-          let loadedProfile = {};
+            let loadedProfile = {};
 
-          if(profile.start) { loadedProfile.startTime = DateTime.fromISO(profile.start).toMillis(); }
-          if(profile.end) { loadedProfile.endTime = DateTime.fromISO(profile.end).toMillis(); }
-
-          // Assets
-          if(!profile.assets) {
-            loadedProfile.assetsDefault = "no-access";
-          } else {
-            loadedProfile.assetsDefault = profile.assets.default_permission || "no-access";
-            loadedProfile.assets = loadedProfile.assetsDefault;
-            loadedProfile.assetPermissions = [];
-
-            if(profile.assets.custom_permissions) {
-              loadedProfile.assets = "custom";
-              loadedProfile.assetPermissions = Object.keys(profile.assets.custom_permissions).map(assetKey => {
-                const customPermission = profile.assets.custom_permissions[assetKey];
-
-                let loadedPermission = titleAssetMap[assetKey] || {};
-                loadedPermission.permission = customPermission.permission || "no-access";
-
-                if(customPermission.start) { loadedPermission.startTime = DateTime.fromISO(customPermission.start).toMillis(); }
-                if(customPermission.end) { loadedPermission.endTime = DateTime.fromISO(customPermission.end).toMillis(); }
-
-                return loadedPermission;
-              });
+            if(profile.start) {
+              loadedProfile.startTime = DateTime.fromISO(profile.start).toMillis();
             }
-          }
-
-          // Offerings
-          if(!profile.offerings) {
-            loadedProfile.offeringsDefault = "no-access";
-          } else {
-            loadedProfile.offeringsDefault = profile.offerings.default_permission || "no-access";
-            loadedProfile.offerings = loadedProfile.offeringsDefault;
-            loadedProfile.offeringPermissions = [];
-
-            if(profile.offerings.custom_permissions) {
-              loadedProfile.offerings = "custom";
-              loadedProfile.offeringPermissions = Object.keys(profile.offerings.custom_permissions).map(offeringKey => {
-                const customPermission = profile.offerings.custom_permissions[offeringKey];
-
-                let loadedPermission = this.allTitles[titleId].offerings.find(offering => offering.offeringKey === offeringKey) || {};
-                loadedPermission.permission = customPermission.permission || "no-access";
-
-                if(customPermission.start) { loadedPermission.startTime = DateTime.fromISO(customPermission.start).toMillis(); }
-                if(customPermission.end) { loadedPermission.endTime = DateTime.fromISO(customPermission.end).toMillis(); }
-                if(customPermission.geo) { loadedPermission.geoRestriction = customPermission.geo; }
-
-                return loadedPermission;
-              });
+            if(profile.end) {
+              loadedProfile.endTime = DateTime.fromISO(profile.end).toMillis();
             }
-          }
 
-          this.titleProfiles[titleId][profileName] = loadedProfile;
-        }
+            // Assets
+            if(!profile.assets) {
+              loadedProfile.assetsDefault = "no-access";
+            } else {
+              loadedProfile.assetsDefault = profile.assets.default_permission || "no-access";
+              loadedProfile.assets = loadedProfile.assetsDefault;
+              loadedProfile.assetPermissions = [];
+
+              if(profile.assets.custom_permissions) {
+                loadedProfile.assets = "custom";
+                loadedProfile.assetPermissions = Object.keys(profile.assets.custom_permissions).map(assetKey => {
+                  const customPermission = profile.assets.custom_permissions[assetKey];
+
+                  let loadedPermission = titleAssetMap[assetKey] || {};
+                  loadedPermission.permission = customPermission.permission || "no-access";
+
+                  if(customPermission.start) {
+                    loadedPermission.startTime = DateTime.fromISO(customPermission.start).toMillis();
+                  }
+                  if(customPermission.end) {
+                    loadedPermission.endTime = DateTime.fromISO(customPermission.end).toMillis();
+                  }
+
+                  return loadedPermission;
+                });
+              }
+            }
+
+            // Offerings
+            if(!profile.offerings) {
+              loadedProfile.offeringsDefault = "no-access";
+            } else {
+              loadedProfile.offeringsDefault = profile.offerings.default_permission || "no-access";
+              loadedProfile.offerings = loadedProfile.offeringsDefault;
+              loadedProfile.offeringPermissions = [];
+
+              if(profile.offerings.custom_permissions) {
+                loadedProfile.offerings = "custom";
+                loadedProfile.offeringPermissions = Object.keys(profile.offerings.custom_permissions).map(offeringKey => {
+                  const customPermission = profile.offerings.custom_permissions[offeringKey];
+
+                  let loadedPermission = this.allTitles[titleId].offerings.find(offering => offering.offeringKey === offeringKey) || {};
+                  loadedPermission.permission = customPermission.permission || "no-access";
+
+                  if(customPermission.start) {
+                    loadedPermission.startTime = DateTime.fromISO(customPermission.start).toMillis();
+                  }
+                  if(customPermission.end) {
+                    loadedPermission.endTime = DateTime.fromISO(customPermission.end).toMillis();
+                  }
+                  if(customPermission.geo) {
+                    loadedPermission.geoRestriction = customPermission.geo;
+                  }
+
+                  return loadedPermission;
+                });
+              }
+            }
+
+            this.titleProfiles[titleId][profileName] = loadedProfile;
+          }
+        });
 
         // Permissions
         this.titlePermissions[titleId] = {};

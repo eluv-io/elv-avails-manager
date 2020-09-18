@@ -72,6 +72,11 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
     }
   }
 
+  &.disabled {
+    color: $elv-color-lightgray;
+    cursor: inherit;
+  }
+
   &:not(.list-header) {
     &:not(.title-profile-list-entry) {
       &:hover {
@@ -176,6 +181,10 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
   grid-template-columns: $elv-spacing-ml 1fr 1fr 1fr 1fr 1fr 1fr;
 }
 
+.browse-list-entry {
+  grid-template-columns: 1fr 10rem;
+}
+
 .offerings-list-entry {
   grid-template-columns: 2fr 2fr;
 }
@@ -190,6 +199,10 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 
 .title-permission-list-entry {
   grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 5rem;
+}
+
+.target-permission-list-entry {
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 5rem;
 }
 
 .groups-browse-list-entry {

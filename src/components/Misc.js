@@ -1,8 +1,8 @@
 import React from "react";
-import BackIcon from "../static/icons/directory_back.svg";
 import {Confirm, IconButton} from "elv-components-js";
 import {Link} from "react-router-dom";
 
+import BackIcon from "../static/icons/directory_back.svg";
 import DeleteIcon from "../static/icons/trash.svg";
 
 export const BackButton = ({to}) => (

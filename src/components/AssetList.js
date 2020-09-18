@@ -89,6 +89,7 @@ class AssetList extends React.Component {
     const isSelected = this.state.selected.find(entry => entry.assetKey === asset.assetKey);
     return (
       <div
+        tabIndex={0}
         key={`asset-entry-${asset.assetKey}`}
         onClick={() => this.SelectAsset(asset)}
         className={`list-entry list-entry-selectable assets-list-entry ${index % 2 === 0 ? "even" : "odd"} ${isSelected ? "selected" : ""} ${this.props.withPermissions ? "assets-list-entry-with-permissions" : ""}`}

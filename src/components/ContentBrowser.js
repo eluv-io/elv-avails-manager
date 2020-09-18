@@ -4,7 +4,10 @@ import React from "react";
 import AsyncComponent from "./AsyncComponent";
 import {inject, observer} from "mobx-react";
 import PropTypes from "prop-types";
-import {Action, LoadingElement, Maybe, Tabs} from "elv-components-js";
+import {Action, IconButton, LoadingElement, Maybe, Tabs} from "elv-components-js";
+
+import CloseIcon from "../static/icons/x-circle.svg";
+import BackIcon from "../static/icons/directory_back.svg";
 
 @observer
 class BrowserList extends React.Component {
@@ -15,7 +18,8 @@ class BrowserList extends React.Component {
       page: 1,
       filter: "",
       version: 1,
-      loading: false
+      loading: false,
+      selected: []
     };
   }
 
@@ -78,6 +82,32 @@ class BrowserList extends React.Component {
     );
   }
 
+  Submit() {
+    if(!this.props.multiple) { return; }
+
+    return (
+      <div className="actions-container">
+        <Action onClick={async () => {
+          if(this.state.loading) { return; }
+
+          try {
+            this.setState({loading: true});
+
+            await this.props.Select(this.state.selected);
+          } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error(error);
+          } finally {
+            this.setState({loading: false});
+          }
+        }}
+        >
+          Submit
+        </Action>
+      </div>
+    );
+  }
+
   render() {
     let list = this.props.list || [];
     if(!this.props.paginated) {
@@ -89,14 +119,15 @@ class BrowserList extends React.Component {
         <h3>{this.props.header}</h3>
         <h4>{this.props.subHeader}</h4>
         { this.Pagination() }
+        { this.Submit() }
         { this.Filter() }
         <AsyncComponent
           key={`browser-listing-version-${this.state.version}`}
           Load={() => this.props.Load({page: this.state.page, filter: this.state.filter})}
           render={() => (
             <LoadingElement loading={this.state.loading}>
-              <ul className={`browser ${this.props.hashes ? "mono" : ""}`}>
-                {list.map(({id, name, objectName, objectDescription, assetType, titleType}) => {
+              <div className="list scroll-list">
+                {list.map(({id, name, objectName, objectDescription, assetType, titleType}, index) => {
                   let disabled =
                     (this.props.assetTypes && !this.props.assetTypes.includes(assetType)) ||
                     (this.props.titleTypes && !this.props.titleTypes.includes(titleType));
@@ -110,27 +141,38 @@ class BrowserList extends React.Component {
                     title = title + `\n\tAllowed Asset Types: ${(this.props.assetTypes || []).join(", ")}`;
                   }
 
+                  const selected = this.state.selected.includes(id);
+
                   return (
-                    <li key={`browse-entry-${id}`}>
-                      <button
-                        disabled={disabled}
-                        title={title}
-                        onClick={async () => {
-                          this.setState({loading: true});
-                          try {
+                    <div
+                      className={`list-entry list-entry-selectable browse-list-entry ${selected ? "selected" : ""} ${disabled ? "disabled" : ""} ${index % 2 === 0 ? "even" : "odd"}`}
+                      key={`browse-entry-${id}`}
+                      title={title}
+                      onClick={async () => {
+                        if(disabled) { return; }
+
+                        this.setState({loading: true});
+                        try {
+                          if(this.props.multiple) {
+                            if(!selected) {
+                              this.setState({selected: this.state.selected.concat([id])});
+                            } else {
+                              this.setState({selected: this.state.selected.filter(otherId => otherId !== id)});
+                            }
+                          } else {
                             await this.props.Select(id);
-                          } finally {
-                            this.setState({loading: false});
                           }
-                        }}
-                      >
-                        <div>{name}</div>
-                        {assetType ? <div className="hint">{assetType}</div> : null}
-                      </button>
-                    </li>
+                        } finally {
+                          this.setState({loading: false});
+                        }
+                      }}
+                    >
+                      <div>{name}</div>
+                      <div className="hint">{assetType}</div>
+                    </div>
                   );
                 })}
-              </ul>
+              </div>
             </LoadingElement>
           )}
         />
@@ -154,6 +196,7 @@ BrowserList.propTypes = {
       ])
     })
   ),
+  multiple: PropTypes.bool,
   hashes: PropTypes.bool,
   assetTypes: PropTypes.arrayOf(PropTypes.string),
   titleTypes: PropTypes.arrayOf(PropTypes.string),
@@ -173,25 +216,40 @@ class ContentBrowser extends React.Component {
 
     this.state = {
       libraryId: undefined,
-      objectId: undefined,
       error: "",
       siteIndex: undefined,
-      tab: this.props.site && this.props.rootStore.sites.length > 0 ? "site" : "all"
+      tab: this.props.browseSite && this.props.rootStore.sites.length > 0 ? "site" : "all"
     };
+
+    this.SelectObjects = this.SelectObjects.bind(this);
+  }
+
+  async SelectObjects(arg) {
+    try {
+      this.setState({error: ""});
+
+      if(this.props.multiple) {
+        await this.props.onComplete({
+          libraryId: this.state.libraryId,
+          objectIds: arg
+        });
+      } else {
+        await this.props.onComplete({
+          libraryId: this.state.libraryId,
+          objectId: arg
+        });
+      }
+    } catch (error) {
+      this.setState({error: error.message || error});
+
+      setTimeout(() => this.setState({error: ""}), 6000);
+    }
   }
 
   Content() {
     if(!this.state.libraryId) {
       return (
         <React.Fragment>
-          <div className="content-browser-actions">
-            <Action
-              className="back tertiary"
-              onClick={this.props.onCancel}
-            >
-              Cancel
-            </Action>
-          </div>
           <BrowserList
             key="browser-list-libraries"
             header="Select a library"
@@ -202,103 +260,38 @@ class ContentBrowser extends React.Component {
           />
         </React.Fragment>
       );
-    } else if(!this.state.objectId) {
-      const library = this.props.contentStore.libraries
-        .find(({libraryId}) => libraryId === this.state.libraryId);
-
-      let list = this.props.contentStore.objects[this.state.libraryId] || [];
-
-      return (
-        <React.Fragment>
-          <div className="content-browser-actions">
-            <Action
-              className="back secondary"
-              onClick={() => this.setState({libraryId: undefined})}
-            >
-              Back
-            </Action>
-            <Action
-              className="back tertiary"
-              onClick={this.props.onCancel}
-            >
-              Cancel
-            </Action>
-          </div>
-          <BrowserList
-            key={`browser-list-${this.state.libraryId}`}
-            header={library.name}
-            list={list}
-            paginated
-            paginationInfo={this.props.contentStore.objectPaginationInfo[this.state.libraryId]}
-            assetTypes={this.props.assetTypes}
-            titleTypes={this.props.titleTypes}
-            Load={async ({page, filter}) => await this.props.contentStore.LoadObjects({
-              libraryId: this.state.libraryId,
-              page,
-              filter,
-              assetTypes: this.props.assetTypes,
-              titleTypes: this.props.titleTypes
-            })}
-            Select={async objectId => {
-              if(this.props.objectOnly) {
-                try {
-                  this.setState({error: ""});
-
-                  await this.props.onComplete({
-                    libraryId: this.state.libraryId,
-                    objectId
-                  });
-                } catch (error) {
-                  this.setState({error: error.message || error});
-
-                  setTimeout(() => this.setState({error: ""}), 6000);
-                }
-              } else {
-                this.setState({objectId});
-              }
-            }}
-          />
-        </React.Fragment>
-      );
-    } else {
-      const library = this.props.contentStore.libraries
-        .find(({libraryId}) => libraryId === this.state.libraryId);
-      const object = this.props.contentStore.objects[this.state.libraryId]
-        .find(({objectId}) => objectId === this.state.objectId);
-
-      return (
-        <React.Fragment>
-          <div className="content-browser-actions">
-            <Action
-              className="back secondary"
-              onClick={() => this.setState({objectId: undefined})}
-            >
-              Back
-            </Action>
-            <Action
-              className="back tertiary"
-              onClick={this.props.onCancel}
-            >
-              Cancel
-            </Action>
-          </div>
-          <BrowserList
-            key={`browser-list-${this.state.objectId}`}
-            header="Select a version"
-            subHeader={<React.Fragment><div>{library.name}</div><div>{object.name}</div></React.Fragment>}
-            list={this.props.contentStore.versions[this.state.objectId]}
-            hashes={true}
-            Load={async () => await this.props.contentStore.LoadVersions(this.state.libraryId, this.state.objectId)}
-            Select={async versionHash => await this.props.onComplete({
-              libraryId: this.state.libraryId,
-              objectId: this.state.objectId,
-              versionHash
-            })}
-            paginated={false}
-          />
-        </React.Fragment>
-      );
     }
+
+    const library = this.props.contentStore.libraries
+      .find(({libraryId}) => libraryId === this.state.libraryId);
+
+    let list = this.props.contentStore.objects[this.state.libraryId] || [];
+
+    return (
+      <React.Fragment>
+        <div className="content-browser-actions">
+
+        </div>
+        <BrowserList
+          key={`browser-list-${this.state.libraryId}`}
+          header={library.name}
+          list={list}
+          paginated
+          paginationInfo={this.props.contentStore.objectPaginationInfo[this.state.libraryId]}
+          assetTypes={this.props.assetTypes}
+          titleTypes={this.props.titleTypes}
+          multiple={this.props.multiple}
+          Load={async ({page, filter}) => await this.props.contentStore.LoadObjects({
+            libraryId: this.state.libraryId,
+            page,
+            filter,
+            assetTypes: this.props.assetTypes,
+            titleTypes: this.props.titleTypes
+          })}
+          Select={this.SelectObjects}
+        />
+      </React.Fragment>
+    );
   }
 
   Site() {
@@ -315,13 +308,14 @@ class ContentBrowser extends React.Component {
     } else {
       return (
         <BrowserList
+          multiple={this.props.multiple}
           key={`site-browser-${this.state.siteIndex}`}
           header={"Select a Title"}
           Load={args => this.props.contentStore.LoadSiteTitles({siteId: this.props.rootStore.sites[this.state.siteIndex].objectId, ...args})}
           list={this.props.contentStore.siteTitles}
           paginated
           paginationInfo={this.props.contentStore.sitePaginationInfo}
-          Select={objectId => this.props.onComplete({objectId})}
+          Select={this.SelectObjects}
         />
       );
     }
@@ -330,9 +324,23 @@ class ContentBrowser extends React.Component {
   render() {
     return (
       <div className="content-browser">
-        <h2>{this.props.header}</h2>
+        <h2 className="page-header">
+          { this.state.libraryId ?
+            <IconButton
+              icon={BackIcon}
+              className="back-button"
+              onClick={() => this.setState({libraryId: undefined, selected: []})}
+              label="Back"
+            /> : null }
+          {this.props.header}
+        </h2>
+        <IconButton
+          icon={CloseIcon}
+          className="close-button"
+          label="Close"
+        />
         {
-          this.props.site && this.props.rootStore.sites.length > 0 ?
+          this.props.browseSite && this.props.rootStore.sites.length > 0 ?
             <Tabs className="secondary" selected={this.state.tab} onChange={tab => this.setState({tab, siteIndex: undefined})} options={[["Site", "site"], ["All", "all"]]} /> :
             null
         }
@@ -348,12 +356,12 @@ class ContentBrowser extends React.Component {
 }
 
 ContentBrowser.propTypes = {
-  site: PropTypes.bool,
+  browseSite: PropTypes.bool,
+  multiple: PropTypes.bool,
   header: PropTypes.string,
   assetTypes: PropTypes.arrayOf(PropTypes.string),
   titleTypes: PropTypes.arrayOf(PropTypes.string),
   playableOnly: PropTypes.bool,
-  objectOnly: PropTypes.bool,
   onComplete: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired
 };

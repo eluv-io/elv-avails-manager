@@ -28,7 +28,7 @@ class TargetPermissions extends React.Component {
   render() {
     return (
       <div className="list title-profile-list">
-        <div className="list-entry list-header title-permission-list-entry title-permission-list-header">
+        <div className="list-entry list-header target-permission-list-entry title-permission-list-header">
           { this.SortableHeader("name", "Title") }
           { this.SortableHeader("profile", "Availability Profile") }
           { this.SortableHeader("startTime", "Start Time") }
@@ -45,7 +45,7 @@ class TargetPermissions extends React.Component {
               const profile = this.props.rootStore.titleProfiles[titlePermission.objectId][titlePermission.profile];
 
               return (
-                <div className={`list-entry title-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${this.props.target.address}`}>
+                <div className={`list-entry target-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${this.props.target.address}`}>
                   <div className="small-font">
                     <Link to={UrlJoin("/titles", titlePermission.objectId)}>
                       <ImageIcon icon={LinkIcon} />
@@ -89,7 +89,7 @@ class TargetPermissions extends React.Component {
                     <DeleteButton
                       confirm="Are you sure you want to remove this title?"
                       title={`Remove ${titlePermission.name}`}
-                      Delete={() => this.props.rootStore.RemoveTitlePermission({objectId: titlePermission.objectId, address: this.props.target.address})}
+                      Delete={() => this.props.rootStore.RemoveTitlePermission(titlePermission.objectId, this.props.target.address)}
                     />
                   </div>
                 </div>

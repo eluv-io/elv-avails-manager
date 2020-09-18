@@ -4,11 +4,48 @@
   align-items: center;
   display: flex;
   flex-direction: column;
-  margin-bottom: $elv-spacing-l;
-  min-height: 80vh;
+  max-height: 90vh;
+  min-height: 90vh;
+  position: relative;
+
+  .page-header {
+    justify-content: center;
+
+    .back-button {
+      left: 0;
+      position: absolute;
+    }
+  }
+
+  .close-button {
+    position: absolute;
+    right: $elv-spacing-xxs;
+    top: $elv-spacing-xxs;
+
+    svg {
+      stroke: $elv-color-mediumgray;
+    }
+  }
+
+  .actions-container {
+    display: flex;
+    justify-content: center;
+    margin: $elv-spacing-xs 0;
+
+    button {
+      height: 2.1rem;
+      width: 10rem;
+    }
+  }
 
   .message {
-    height: 2rem;
+    align-items: center;
+    display: flex;
+    min-height: 2.5rem;
+  }
+
+  .hint {
+    color: $elv-color-mediumgray;
   }
 
   .-elv-async-component-loading {
@@ -22,8 +59,13 @@
   }
 
   .browser-container {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
     height: 100%;
     max-width: 100%;
+    overflow-y: hidden;
+    padding: $elv-spacing-xxs;
     width: 40rem;
   }
 
@@ -33,8 +75,9 @@
   }
 
   .browser-filter {
+    font-size: $elv-font-l;
     margin-bottom: $elv-spacing-xs;
-    width: 100%;
+    min-height: 2.3rem;
   }
 
   .browser-pagination {
@@ -42,7 +85,7 @@
     color: $elv-color-text-light;
     display: flex;
     justify-content: center;
-    margin-bottom: $elv-spacing-s;
+    margin-bottom: $elv-spacing-xs;
     position: relative;
 
     button {
@@ -74,53 +117,5 @@
     color: $elv-color-text-light;
     margin: $elv-spacing-s 0 $elv-spacing-xs;
     text-align: center;
-  }
-
-  ul {
-    li {
-      border: 1px solid $elv-color-gray;
-      border-bottom: 0;
-
-      &:last-child {
-        border-bottom: 1px solid $elv-color-gray;
-      }
-    }
-
-    button {
-      background: transparent;
-      border: 0;
-      cursor: pointer;
-      font-size: $elv-font-m;
-      height: 100%;
-      margin: 0;
-      max-width: 100%;
-      min-height: 2.5rem;
-      outline: 0;
-      padding: $elv-spacing-xs;
-      width: 100%;
-
-      div {
-        @include elv-ellipsis;
-      }
-
-      &:not(:disabled) {
-        &:hover {
-          background: $elv-color-mediumblue;
-          color: $elv-color-text-white;
-
-          div {
-            color: $elv-color-text-white;
-          }
-        }
-      }
-    }
-
-    &.mono {
-      button {
-        @include elv-ellipsis;
-        font-family: $elv-font-monospace;
-        font-size: $elv-font-s;
-      }
-    }
   }
 }

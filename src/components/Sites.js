@@ -90,7 +90,7 @@ class Sites extends React.Component {
           OnClickOutside={this.CloseModal}
         >
           <ContentBrowser
-            site={false}
+            browseSite={false}
             header="Select a Site"
             titleTypes={["site"]}
             onComplete={this.AddSite}

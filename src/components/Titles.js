@@ -3,7 +3,7 @@ import {Action, Modal} from "elv-components-js";
 import ContentBrowser from "./ContentBrowser";
 import {inject, observer} from "mobx-react";
 import UrlJoin from "url-join";
-import {Link, Redirect} from "react-router-dom";
+import {Link} from "react-router-dom";
 import {BackButton, ChangeSort, DeleteButton, SortableHeader} from "./Misc";
 import Path from "path";
 import AsyncComponent from "./AsyncComponent";
@@ -22,7 +22,7 @@ class Titles extends React.Component {
     };
 
     this.Content = this.Content.bind(this);
-    this.AddTitle = this.AddTitle.bind(this);
+    this.AddTitles = this.AddTitles.bind(this);
     this.CloseModal = this.CloseModal.bind(this);
     this.ActivateModal = this.ActivateModal.bind(this);
 
@@ -94,7 +94,7 @@ class Titles extends React.Component {
         </div>
 
         <div className="controls">
-          <Action onClick={this.ActivateModal}>Add Title</Action>
+          <Action onClick={this.ActivateModal}>Add Titles</Action>
           <input className="filter" name="filter" value={this.state.filter} onChange={event => this.setState({filter: event.target.value})} placeholder="Filter Titles..."/>
         </div>
 
@@ -125,17 +125,35 @@ class Titles extends React.Component {
 
   /* Content Browser */
 
-  async AddTitle(args) {
-    await this.props.rootStore.AddTitle(args);
-    this.CloseModal();
+  async AddTitles({libraryId, objectIds}) {
+    let addError;
+    await Promise.all(
+      objectIds.map(async objectId => {
+        try {
+          await this.props.rootStore.AddTitle({libraryId, objectId: objectId});
 
-    if(this.Target()) {
-      this.props.rootStore.InitializeTitlePermission(this.Target().address, args.objectId, this.Target().type);
-    } else {
-      this.setState({
-        modal: <Redirect to={UrlJoin(this.props.location.pathname, args.objectId)} />
-      });
-    }
+          if(this.Target()) {
+            this.props.rootStore.InitializeTitlePermission(this.Target().address, objectId, this.Target().type);
+          }
+        } catch (error) {
+          if(!addError) { addError = error; }
+
+          this.props.rootStore.RemoveTitle(objectId);
+
+          if(this.Target()) {
+            this.props.rootStore.RemoveTitlePermission(this.Target().address, objectId, this.Target().type);
+          }
+
+          // eslint-disable-next-line no-console
+          console.error(error);
+          throw error;
+        }
+      })
+    );
+
+    if(addError) { throw addError; }
+
+    this.CloseModal();
   }
 
   ActivateModal() {
@@ -147,9 +165,10 @@ class Titles extends React.Component {
           OnClickOutside={this.CloseModal}
         >
           <ContentBrowser
-            site={true}
-            header="Select a Title"
-            onComplete={this.AddTitle}
+            browseSite
+            multiple
+            header="Select Titles"
+            onComplete={this.AddTitles}
             onCancel={this.CloseModal}
             objectOnly
           />

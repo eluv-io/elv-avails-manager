@@ -108,6 +108,7 @@ class Title extends React.Component {
         {
           Object.keys(this.props.rootStore.titleProfiles[this.Title().objectId]).map((profile, index) =>
             <TitleProfile
+              // This component doesn't want to update with the mobx state, so force it
               key={`title-profile-${this.Title().objectId}-${profile}`}
               objectId={this.Title().objectId}
               profile={profile}
@@ -123,7 +124,12 @@ class Title extends React.Component {
     let content;
     switch (this.state.tab) {
       case "permissions":
-        content = <TitlePermissions objectId={this.Title().objectId} />;
+        content = (
+          <TitlePermissions
+            key={JSON.stringify(this.props.rootStore.titlePermissions[this.Title().objectId] || {})}
+            objectId={this.Title().objectId}
+          />
+        );
         break;
       case "profiles":
         content = this.Profiles();

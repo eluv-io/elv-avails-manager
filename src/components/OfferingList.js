@@ -46,6 +46,7 @@ class OfferingList extends React.Component {
     const isSelected = this.state.selected.find(entry => entry.offeringKey === offering.offeringKey);
     return (
       <div
+        tabIndex={0}
         key={`offering-entry-${offering.offeringKey}`}
         className={`list-entry offerings-list-entry ${index % 2 === 0 ? "even" : "odd"} ${this.props.selectable ? "list-entry-selectable" : ""} ${this.props.withPermissions ? "offerings-list-entry-with-permissions" : ""} ${isSelected ? "selected" : ""}`}
         onClick={this.props.selectable ? () => this.SelectOffering(offering) : undefined}

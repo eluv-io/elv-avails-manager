@@ -143,7 +143,7 @@ class Groups extends React.Component {
         </div>
 
         <div className="controls">
-          <Action onClick={() => this.ActivateModal(false)}>Add Group</Action>
+          <Action onClick={() => this.ActivateModal(false)}>Add Fabric Group</Action>
           {
             this.props.rootStore.oauthSettings.domain && this.props.rootStore.oauthGroups ?
               <Action onClick={() => this.ActivateModal(true)}>

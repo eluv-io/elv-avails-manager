@@ -111,11 +111,7 @@ class TitlePermissions extends React.Component {
                     <DeleteButton
                       confirm="Are you sure you want to remove this permission?"
                       title={`Remove ${permissions.name}`}
-                      Delete={() => {
-                        this.props.rootStore.RemoveTitlePermission(this.props.objectId, address);
-                        // TODO: Figure out why this doesn't update properly
-                        this.setState({key: this.state.key + 1});
-                      }}
+                      Delete={() => this.props.rootStore.RemoveTitlePermission(this.props.objectId, address)}
                     />
                   </div>
                 </div>
