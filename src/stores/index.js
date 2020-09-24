@@ -919,8 +919,8 @@ class RootStore {
           const profile = this.titleProfiles[titleId][profileName];
 
           let profileSpec = {};
-          if(profile.startTime) { profileSpec.start = DateTime.fromMillis(profile.startTime).toISODate(); }
-          if(profile.endTime) { profileSpec.end = DateTime.fromMillis(profile.endTime).toISODate(); }
+          if(profile.startTime) { profileSpec.start = DateTime.fromMillis(profile.startTime).toUTC().toISO(); }
+          if(profile.endTime) { profileSpec.end = DateTime.fromMillis(profile.endTime).toUTC().toISO(); }
 
           // Assets
           profileSpec.assets = {default_permission: profile.assets === "custom" ? profile.assetsDefault : profile.assets };
@@ -928,8 +928,8 @@ class RootStore {
             profileSpec.assets.custom_permissions = {};
             profile.assetPermissions.forEach(asset => {
               let assetPermission = {permission: asset.permission};
-              if(asset.startTime) { assetPermission.start = DateTime.fromMillis(asset.startTime).toISODate(); }
-              if(asset.endTime) { assetPermission.end = DateTime.fromMillis(asset.endTime).toISODate(); }
+              if(asset.startTime) { assetPermission.start = DateTime.fromMillis(asset.startTime).toUTC().toISO(); }
+              if(asset.endTime) { assetPermission.end = DateTime.fromMillis(asset.endTime).toUTC().toISO(); }
 
               profileSpec.assets.custom_permissions[asset.assetKey] = assetPermission;
             });
@@ -942,10 +942,10 @@ class RootStore {
             profile.offeringPermissions.forEach(offering => {
               let offeringPermission = {permission: offering.permission};
               if(offering.startTime) {
-                offeringPermission.start = DateTime.fromMillis(offering.startTime).toISODate();
+                offeringPermission.start = DateTime.fromMillis(offering.startTime).toUTC().toISO();
               }
               if(offering.endTime) {
-                offeringPermission.end = DateTime.fromMillis(offering.endTime).toISODate();
+                offeringPermission.end = DateTime.fromMillis(offering.endTime).toUTC().toISO();
               }
               if(offering.geoRestriction) {
                 offeringPermission.geo = offering.geoRestriction;
@@ -977,8 +977,8 @@ class RootStore {
 
           let itemPermission = { profile: permission.profile, subject: { id, type } };
 
-          if(permission.startTime) { itemPermission.start = DateTime.fromMillis(permission.startTime).toISODate(); }
-          if(permission.endTime) { itemPermission.end = DateTime.fromMillis(permission.endTime).toISODate(); }
+          if(permission.startTime) { itemPermission.start = DateTime.fromMillis(permission.startTime).toUTC().toISO(); }
+          if(permission.endTime) { itemPermission.end = DateTime.fromMillis(permission.endTime).toUTC().toISO(); }
 
           return itemPermission;
         });
@@ -1011,9 +1011,12 @@ class RootStore {
       });
 
       yield this.Finalize();
+
+      this.SetMessage("Successfully saved permissions");
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
+      this.SetError("Failed to save: " + error.message || error);
     }
   });
 }

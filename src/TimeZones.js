@@ -346,7 +346,8 @@ const zones = [
   "Pacific/Tarawa",
   "Pacific/Tongatapu",
   "Pacific/Wake",
-  "Pacific/Wallis"
+  "Pacific/Wallis",
+  "UTC"
 ];
 
 export default zones;
