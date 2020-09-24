@@ -6,7 +6,7 @@ import {inject, observer} from "mobx-react";
 import PropTypes from "prop-types";
 import {Action, IconButton, LoadingElement, Maybe, Tabs} from "elv-components-js";
 
-import CloseIcon from "../static/icons/x-circle.svg";
+import CloseIcon from "../static/icons/x.svg";
 import BackIcon from "../static/icons/directory_back.svg";
 
 @observer
@@ -338,6 +338,7 @@ class ContentBrowser extends React.Component {
           icon={CloseIcon}
           className="close-button"
           label="Close"
+          onClick={this.props.onCancel}
         />
         {
           this.props.browseSite && this.props.rootStore.sites.length > 0 ?

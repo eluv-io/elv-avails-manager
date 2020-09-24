@@ -12,6 +12,8 @@ configure({
 });
 
 class RootStore {
+  @observable appConfiguration;
+
   @observable libraryId;
   @observable objectId;
   @observable versionHash;
@@ -155,6 +157,37 @@ class RootStore {
     this.sites = this.sites.filter(site => site.objectId !== objectId);
   }
 
+  DefaultProfiles() {
+    if(this.appConfiguration && this.appConfiguration.profiles) {
+      let profiles = {};
+      Object.keys(this.appConfiguration.profiles).map(profileKey => {
+        const profile = this.appConfiguration.profiles[profileKey];
+        profiles[profileKey] = {
+          assets: profile.assets_default || "full-access",
+          assetsDefault: profile.assets_default || "full-access",
+          offerings: profile.offerings_default || "full-access",
+          offeringsDefault: profile.offerings_default || "full-access",
+          assetPermissions: [],
+          offeringPermissions: []
+        };
+      });
+
+      return profiles;
+    }
+
+    // Default configuration
+    return {
+      default: {
+        assets: "full-access",
+        offerings: "full-access",
+        offeringsDefault: "full-access",
+        assetsDefault: "full-access",
+        assetPermissions: [],
+        offeringPermissions: []
+      }
+    };
+  }
+
   @action.bound
   AddTitle = flow(function * ({libraryId, objectId, defaultProfiles=true}) {
     if(this.allTitles[objectId]) { return; }
@@ -185,40 +218,7 @@ class RootStore {
 
     if(!this.titleProfiles[objectId]) {
       if(defaultProfiles) {
-        this.titleProfiles[objectId] = {
-          default: {
-            assets: "full-access",
-            offerings: "full-access",
-            offeringsDefault: "full-access",
-            assetsDefault: "full-access",
-            assetPermissions: [],
-            offeringPermissions: []
-          },
-          "pre-release": {
-            assets: "no-access",
-            offerings: "no-access",
-            offeringsDefault: "no-access",
-            assetsDefault: "no-access",
-            assetPermissions: [],
-            offeringPermissions: []
-          },
-          "servicing": {
-            assets: "no-access",
-            offerings: "no-access",
-            offeringsDefault: "no-access",
-            assetsDefault: "no-access",
-            assetPermissions: [],
-            offeringPermissions: []
-          },
-          "all-access": {
-            assets: "full-access",
-            offerings: "full-access",
-            offeringsDefault: "full-access",
-            assetsDefault: "full-access",
-            assetPermissions: [],
-            offeringPermissions: []
-          }
-        };
+        this.titleProfiles[objectId] = this.DefaultProfiles();
       } else {
         this.titleProfiles[objectId] = {};
       }
@@ -564,6 +564,22 @@ class RootStore {
         // eslint-disable-next-line no-console
         console.error(error);
       }
+    }
+
+    const typeHash = (yield this.client.ContentObject({
+      libraryId: this.libraryId,
+      objectId: this.objectId
+    })).type;
+
+    if(typeHash) {
+      const libraryId = (yield this.client.ContentSpaceId()).replace("ispc", "ilib");
+      const objectId = this.client.utils.DecodeVersionHash(typeHash).objectId;
+
+      this.appConfiguration = (yield this.client.ContentObjectMetadata({
+        libraryId,
+        objectId,
+        metadataSubtree: "public/permissions_configuration"
+      })) || {};
     }
 
     yield this.Load();

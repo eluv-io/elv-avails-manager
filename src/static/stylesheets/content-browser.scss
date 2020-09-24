@@ -19,18 +19,14 @@
 
   .close-button {
     position: absolute;
-    right: $elv-spacing-xxs;
-    top: $elv-spacing-xxs;
-
-    svg {
-      stroke: $elv-color-mediumgray;
-    }
+    right: 0;
+    top: 0;
   }
 
   .actions-container {
     display: flex;
     justify-content: center;
-    margin: $elv-spacing-xs 0;
+    margin: $elv-spacing-s 0;
 
     button {
       height: 2.1rem;
@@ -108,9 +104,7 @@
   }
 
   h3 {
-    margin: $elv-spacing-xs 0;
     text-align: center;
-
   }
 
   h4 {

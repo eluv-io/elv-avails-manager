@@ -174,7 +174,9 @@ h1 {
   }
 }
 
-.back-button {
+a,
+button {
+  &.close-button,
   &.back-button {
     align-items: center;
     border: 1px solid $elv-color-lightgray;
