@@ -47,7 +47,7 @@ class OAuthSettings extends React.Component {
         </LabelledField>
 
         <div className="form-actions">
-          <LoadingElement loading={this.state.syncing}>
+          <LoadingElement loading={this.state.syncing} loadingClassname="no-margin">
             <Action type="submit">Sync</Action>
           </LoadingElement>
         </div>

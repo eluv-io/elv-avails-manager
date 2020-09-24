@@ -43,23 +43,35 @@ body,
 }
 
 header {
-  align-items: flex-end;
+  align-items: center;
   display: flex;
   grid-area: header;
   height: 3.2rem;
-  justify-content: flex-end;
+  justify-content: space-between;
+  padding: $elv-spacing-xs $elv-spacing-s 0;
   position: relative;
 
+  .timezone-selection {
+    margin-right: $elv-spacing-s;
+
+    label {
+      height: 100%;
+      margin-right: $elv-spacing-xs;
+    }
+  }
+
   .message {
+    align-items: center;
     bottom: $elv-spacing-xs;
+    display: flex;
+    flex: 1 1 auto;
+    height: 100%;
     left: 0;
-    padding-left: $elv-spacing-s;
-    position: absolute;
+    text-align: left;
   }
 
   button {
     height: 2.2rem;
-    margin-right: 1rem;
 
     &.-elv-button {
       padding: 0.3rem 5rem;
@@ -327,7 +339,9 @@ button {
 }
 
 .-elv-loading-element {
-  margin: 5rem 0;
+  &:not(.no-margin) {
+    margin: 5rem 0;
+  }
 }
 
 .-elv-button {
@@ -361,6 +375,7 @@ form {
   .form-actions {
     align-content: center;
     display: flex;
+    height: 2rem;
     justify-content: flex-end;
     margin-top: $elv-spacing-m;
 
@@ -370,6 +385,10 @@ form {
       }
     }
   }
+}
+
+.settings-spacer {
+  margin-bottom: 5rem;
 }
 
 .fabric-user-form {

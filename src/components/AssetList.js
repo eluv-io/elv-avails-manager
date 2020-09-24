@@ -64,7 +64,7 @@ class AssetList extends React.Component {
       }
     };
 
-    const FormatDate = millis => millis ? DateTime.fromMillis(millis).toISODate({suppressMilliseconds: true}) : "";
+    const FormatDate = millis => millis ? DateTime.fromMillis(millis).toISO({suppressMilliseconds: true}) : "";
 
     if(!this.props.selectable) {
       return (

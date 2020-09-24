@@ -38,8 +38,8 @@ class AssetSelectionModal extends React.Component {
           options={[["No Access", "no-access"], ["Full Access", "full-access"]]}
           onChange={permission => this.setState({permission})}
         />
-        <DateSelection dateOnly readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
-        <DateSelection dateOnly readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
+        <DateSelection readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
+        <DateSelection readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
         <div className="controls no-margin">
 
         </div>
@@ -121,8 +121,8 @@ class AssetPermissions extends React.Component {
           options={[["No Access", "no-access"], ["Full Access", "full-access"]]}
           onChange={permission => this.setState({permission})}
         />
-        <DateSelection dateOnly readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
-        <DateSelection dateOnly readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
+        <DateSelection readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
+        <DateSelection readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
         <div className="controls">
           <Action
             onClick={async () =>

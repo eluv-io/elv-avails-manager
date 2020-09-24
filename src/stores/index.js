@@ -2,6 +2,7 @@ import {configure, observable, action, computed, flow, runInAction} from "mobx";
 import {DateTime} from "luxon";
 import URI from "urijs";
 import {Buffer} from "buffer";
+import {Settings} from "luxon";
 
 import {FrameClient} from "@eluvio/elv-client-js/src/FrameClient";
 import ContentStore from "./Content";
@@ -24,6 +25,8 @@ class RootStore {
   @observable message = {};
 
   @observable tab = "users";
+
+  @observable timezone = DateTime.local().zoneName;
 
   @observable sites = [];
 
@@ -88,6 +91,11 @@ class RootStore {
     window.rootStore = this;
   }
 
+  @action.bound
+  SetTimezone(zone) {
+    Settings.defaultZoneName = zone;
+    this.timezone = zone;
+  }
 
   FormatType(type) {
     switch (type) {

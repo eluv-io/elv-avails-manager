@@ -1,8 +1,8 @@
 import React from "react";
 import {Action, Modal} from "elv-components-js";
-import ContentBrowser from "./ContentBrowser";
+import ContentBrowser from "../ContentBrowser";
 import {inject, observer} from "mobx-react";
-import {ChangeSort, DeleteButton, SortableHeader} from "./Misc";
+import {ChangeSort, DeleteButton, SortableHeader} from "../Misc";
 
 @inject("rootStore")
 @observer

@@ -87,22 +87,10 @@ class TitlePermissions extends React.Component {
                     </select>
                   </div>
                   <div>
-                    <DateSelection
-                      dateOnly
-                      readOnly
-                      noLabel
-                      value={permissions.startTime}
-                      onChange={dateTime => Update("startTime", dateTime)}
-                    />
+                    <DateSelection readOnly noLabel value={permissions.startTime} onChange={dateTime => Update("startTime", dateTime)} />
                   </div>
                   <div>
-                    <DateSelection
-                      dateOnly
-                      readOnly
-                      noLabel
-                      value={permissions.endTime}
-                      onChange={dateTime => Update("endTime", dateTime)}
-                    />
+                    <DateSelection readOnly noLabel value={permissions.endTime} onChange={dateTime => Update("endTime", dateTime)} />
                   </div>
                   <div className="small-font">
                     { EffectiveAvailability([profile.startTime, permissions.startTime], [profile.endTime, permissions.endTime])}

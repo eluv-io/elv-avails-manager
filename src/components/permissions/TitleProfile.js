@@ -85,22 +85,10 @@ class TitleProfile extends React.Component {
           <div>{ this.AccessSelection("assets")}</div>
           <div>{ this.AccessSelection("offerings")}</div>
           <div>
-            <DateSelection
-              dateOnly
-              readOnly
-              noLabel
-              value={this.PermissionInfo().startTime}
-              onChange={dateTime => this.Update("startTime", dateTime)}
-            />
+            <DateSelection readOnly noLabel value={this.PermissionInfo().startTime} onChange={dateTime => this.Update("startTime", dateTime)} />
           </div>
           <div>
-            <DateSelection
-              dateOnly
-              readOnly
-              noLabel
-              value={this.PermissionInfo().endTime}
-              onChange={dateTime => this.Update("endTime", dateTime)}
-            />
+            <DateSelection readOnly noLabel value={this.PermissionInfo().endTime} onChange={dateTime => this.Update("endTime", dateTime)} />
           </div>
           <div className="actions-cell">
             <DeleteButton

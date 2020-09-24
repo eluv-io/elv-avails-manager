@@ -46,8 +46,8 @@ class TargetPermissions extends React.Component {
 
               return (
                 <div className={`list-entry target-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${this.props.target.address}`}>
-                  <div className="small-font">
-                    <Link to={UrlJoin("/titles", titlePermission.objectId)}>
+                  <div className="small-font" title={titlePermission.name}>
+                    <Link to={UrlJoin("/titles", titlePermission.objectId)} className="title-link">
                       <ImageIcon icon={LinkIcon} />
                     </Link>
                     { titlePermission.name }
@@ -65,22 +65,10 @@ class TargetPermissions extends React.Component {
                     </select>
                   </div>
                   <div>
-                    <DateSelection
-                      dateOnly
-                      readOnly
-                      noLabel
-                      value={titlePermission.startTime}
-                      onChange={dateTime => Update("startTime", dateTime)}
-                    />
+                    <DateSelection readOnly noLabel value={titlePermission.startTime} onChange={dateTime => Update("startTime", dateTime)} />
                   </div>
                   <div>
-                    <DateSelection
-                      dateOnly
-                      readOnly
-                      noLabel
-                      value={titlePermission.endTime}
-                      onChange={dateTime => Update("endTime", dateTime)}
-                    />
+                    <DateSelection readOnly noLabel value={titlePermission.endTime} onChange={dateTime => Update("endTime", dateTime)} />
                   </div>
                   <div className="small-font">
                     { EffectiveAvailability([profile.startTime, titlePermission.startTime], [profile.endTime, titlePermission.endTime])}

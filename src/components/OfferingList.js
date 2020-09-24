@@ -41,7 +41,7 @@ class OfferingList extends React.Component {
   }
 
   OfferingEntry(offering, index) {
-    const FormatDate = millis => millis ? DateTime.fromMillis(millis).toISODate() : "";
+    const FormatDate = millis => millis ? DateTime.fromMillis(millis).toISO({suppressMilliseconds: true}) : "";
 
     const isSelected = this.state.selected.find(entry => entry.offeringKey === offering.offeringKey);
     return (

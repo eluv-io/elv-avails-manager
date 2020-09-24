@@ -17,8 +17,9 @@ import Asset from "./components/Asset";
 import AssetPermissions from "./components/permissions/AssetPermissions";
 import OfferingPermissions from "./components/permissions/OfferingPermissions";
 import Action from "elv-components-js/src/components/Action";
-import OAuthSettings from "./components/OAuthSettings";
-import Sites from "./components/Sites";
+
+import timezones from "./TimeZones";
+import Settings from "./components/settings/Settings";
 
 if(typeof EluvioConfiguration === "undefined") {
   global.EluvioConfiguration = {};
@@ -34,13 +35,29 @@ class App extends React.Component {
     this.Content = this.Content.bind(this);
   }
 
+  Timezone() {
+    return (
+      <div className="timezone-selection">
+        <label>Timezone</label>
+        <select
+          value={this.props.rootStore.timezone}
+          onChange={event => this.props.rootStore.SetTimezone(event.target.value)}
+        >
+          {
+            timezones.map(zone => <option key={`zone-${zone}`} value={zone}>{zone}</option>)
+          }
+        </select>
+      </div>
+    );
+  }
+
   Content() {
     // This function will not be called until the root store initialization has
     // completed and the client is available
 
     const {message, error, key} = this.props.rootStore.message;
 
-    let headerMessage;
+    let headerMessage = <div className="message" />;
     if(error) {
       headerMessage = <div key={`message-${key}`} className="message error-message">{ error }</div>;
     } else if(message) {
@@ -51,6 +68,7 @@ class App extends React.Component {
       <div className="app-container">
         <header>
           { headerMessage }
+          { this.Timezone() }
           <Action
             onClick={async () => await Confirm({
               message: "Are you sure you want to save these permissions?",
@@ -61,19 +79,14 @@ class App extends React.Component {
           </Action>
         </header>
         <nav className="navigation-tabs -elv-tab-container">
-          <NavLink to="/sites" className="-elv-tab" activeClassName="selected">Sites</NavLink>
           <NavLink to="/titles" className="-elv-tab" activeClassName="selected">Titles</NavLink>
           <NavLink to="/users" className="-elv-tab" activeClassName="selected">Users</NavLink>
           <NavLink to="/groups" className="-elv-tab" activeClassName="selected">Groups</NavLink>
-          <NavLink to="/oauth" className="-elv-tab" activeClassName="selected">Settings</NavLink>
+          <NavLink to="/settings" className="-elv-tab" activeClassName="selected">Settings</NavLink>
         </nav>
         <main>
           <Switch>
-            <Route exact path="/sites" component={Sites} />
-
-            <Route exact path="/oauth" component={OAuthSettings} />
-
-            <Route exact path="/view" component={Titles} />
+            <Route exact path="/settings" component={Settings} />
 
             <Route exact path="/users" component={Users} />
             <Route exact path="/users/:userType/:userAddress" component={Titles} />
