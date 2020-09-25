@@ -1,4 +1,5 @@
 import {observable, action, flow} from "mobx";
+import URI from "urijs";
 
 class ContentStore {
   @observable libraries = [];
@@ -32,7 +33,7 @@ class ContentStore {
     const initialNodes = yield client.Nodes();
     try {
       yield client.SetNodes({
-        fabricURIs: EluvioConfiguration.searchNodes
+        fabricURIs: EluvioConfiguration.searchNodes.map(node => URI(node).protocol("https").toString().replace("///", "//"))
       });
 
       const startIndex = (page - 1) * perPage;
