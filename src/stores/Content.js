@@ -43,7 +43,7 @@ class ContentStore {
         linkPath: "public/search",
         queryParams: {
           select: ["public/asset_metadata/title", "public/asset_metadata/display_title"],
-          terms: `(f_title_type:title AND f_asset_type:primary${filter ? ` AND f_display_title:${filter}`: ""})`,
+          terms: `(f_asset_type:primary${filter ? ` AND f_display_title:${filter}`: ""})`,
           start: startIndex,
           limit: perPage
         }
