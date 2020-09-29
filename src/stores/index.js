@@ -310,6 +310,28 @@ class RootStore {
     const permission = yield this.client.Permission({objectId});
     this.allTitles[objectId].permission = this.client.permissionLevels[permission].short;
 
+    Object.keys(this.titleProfiles[objectId] || {}).map(profileName => {
+      if(this.titleProfiles[objectId][profileName].assets === "custom") {
+        const titleAssets = this.allTitles[objectId].metadata.assets || {};
+
+        this.titleProfiles[objectId][profileName].assetPermissions =
+          this.titleProfiles[objectId][profileName].assetPermissions.map(assetPermission => ({
+            ...(titleAssets[assetPermission.assetKey] || {}),
+            ...assetPermission
+          }));
+      }
+
+      if(this.titleProfiles[objectId][profileName].offerings === "custom") {
+        const titleOfferings = this.allTitles[objectId].metadata.offerings || {};
+
+        this.titleProfiles[objectId][profileName].offeringPermissions =
+          this.titleProfiles[objectId][profileName].offeringPermissions.map(offeringPermission => ({
+            ...(titleOfferings[offeringPermission.offeringKey] || {}),
+            ...offeringPermission
+          }));
+      }
+    });
+
     this.allTitles[objectId].fullyLoaded = true;
   });
 
@@ -784,13 +806,9 @@ class RootStore {
       10,
       Object.keys(authSpec),
       async titleId => {
-        await this.LoadFullTitle({objectId: titleId, defaultProfiles: false});
+        await this.AddTitle({objectId: titleId, defaultProfiles: false});
 
         runInAction(() => {
-          // Make asset map to look up assets
-          let titleAssetMap = {};
-          (this.allTitles[titleId].assets || []).forEach(asset => titleAssetMap[asset.assetKey] = asset);
-
           const profiles = Object.keys(authSpec[titleId].profiles);
           for(let i = 0; i < profiles.length; i++) {
             const profileName = profiles[i];
@@ -818,7 +836,7 @@ class RootStore {
                 loadedProfile.assetPermissions = Object.keys(profile.assets.custom_permissions).map(assetKey => {
                   const customPermission = profile.assets.custom_permissions[assetKey];
 
-                  let loadedPermission = titleAssetMap[assetKey] || {};
+                  let loadedPermission = {assetKey};
                   loadedPermission.permission = customPermission.permission || "no-access";
 
                   if(customPermission.start) {
@@ -846,7 +864,7 @@ class RootStore {
                 loadedProfile.offeringPermissions = Object.keys(profile.offerings.custom_permissions).map(offeringKey => {
                   const customPermission = profile.offerings.custom_permissions[offeringKey];
 
-                  let loadedPermission = this.allTitles[titleId].offerings.find(offering => offering.offeringKey === offeringKey) || {};
+                  let loadedPermission = {offeringKey};
                   loadedPermission.permission = customPermission.permission || "no-access";
 
                   if(customPermission.start) {
