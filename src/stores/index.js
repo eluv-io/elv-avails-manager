@@ -915,33 +915,45 @@ class RootStore {
         this.titlePermissions[titleId] = {};
         await Promise.all(
           (authSpec[titleId].permissions || []).map(async loadedPermissions => {
-            const profile = loadedPermissions.profile;
-            let type = loadedPermissions.subject.type;
-            let id = loadedPermissions.subject.oauth_id || loadedPermissions.subject.id;
-            if(type === "group") {
-              type = "fabricGroup";
-              id = this.client.utils.HashToAddress(id);
-              await this.LoadGroup(id, type);
-            } else if(type === "oauth_group") {
-              type = "oauthGroup";
-              await this.LoadGroup(id, type);
-            } else if(type === "user") {
-              type = "fabricUser";
-              id = this.client.utils.HashToAddress(id);
-              const name = this.SafeTraverse(settings, `fabricUsers/${id}/name`);
-              this.LoadUser(id, type, name);
-            } else if(type === "oauth_user") {
-              type = "oauthUser";
-              this.LoadUser(id, type);
+            try {
+              const profile = loadedPermissions.profile;
+              let type = loadedPermissions.subject.type;
+              let id = loadedPermissions.subject.oauth_id || loadedPermissions.subject.id;
+              if(type === "group") {
+                type = "fabricGroup";
+                id = this.client.utils.HashToAddress(id);
+                await this.LoadGroup(id, type);
+              } else if(type === "oauth_group") {
+                type = "oauthGroup";
+                await this.LoadGroup(id, type);
+              } else if(type === "user") {
+                type = "fabricUser";
+                id = this.client.utils.HashToAddress(id);
+                const name = this.SafeTraverse(settings, `fabricUsers/${id}/name`);
+                this.LoadUser(id, type, name);
+              } else if(type === "oauth_user") {
+                type = "oauthUser";
+                this.LoadUser(id, type);
+              }
+
+              this.titlePermissions[titleId][id] = {
+                type: type,
+                profile
+              };
+
+              if(loadedPermissions.start) {
+                this.titlePermissions[titleId][id].startTime = DateTime.fromISO(loadedPermissions.start).toMillis();
+              }
+              if(loadedPermissions.end) {
+                this.titlePermissions[titleId][id].endTime = DateTime.fromISO(loadedPermissions.end).toMillis();
+              }
+            } catch(error) {
+              this.SetError(`Failed to load permission on ${titleId} for ${loadedPermissions.subject.type.replace("_", " ")} ${loadedPermissions.subject.id}`);
+              // eslint-disable-next-line no-console
+              console.error(`Failed to load permission on ${titleId} for ${loadedPermissions.subject.type.replace("_", " ")} ${loadedPermissions.subject.id}`);
+              // eslint-disable-next-line no-console
+              console.error(error);
             }
-
-            this.titlePermissions[titleId][id] = {
-              type: type,
-              profile
-            };
-
-            if(loadedPermissions.start) { this.titlePermissions[titleId][id].startTime = DateTime.fromISO(loadedPermissions.start).toMillis(); }
-            if(loadedPermissions.end) { this.titlePermissions[titleId][id].endTime = DateTime.fromISO(loadedPermissions.end).toMillis(); }
           })
         );
       }
