@@ -404,7 +404,7 @@ class RootStore {
       throw Error("OAuth user info missing");
     }
 
-    const user = this.oauthUsers.find(user => user.address === id);
+    const user = this.oauthUsers[id];
 
     if(!user) {
       throw Error("Unable to find user " + id);
@@ -418,7 +418,7 @@ class RootStore {
       throw Error("OAuth group info missing");
     }
 
-    const group = this.oauthGroups.find(group => group.address === id);
+    const group = this.oauthGroups[id];
 
     if(!group) {
       throw Error("Unable to find group " + id);
@@ -473,7 +473,7 @@ class RootStore {
   LoadOAuthUsers({page=1, perPage=10, filter=""}) {
     const startIndex = (page - 1) * perPage;
 
-    const users = this.oauthUsers
+    const users = Object.values(this.oauthUsers)
       .filter(user => !filter || user.name.toLowerCase().includes(filter.toLowerCase()) || user.address.includes(filter.toLowerCase()))
       .sort((a, b) => a.name < b.name ? -1 : 1);
 
@@ -512,7 +512,7 @@ class RootStore {
 
     const startIndex = (page - 1) * perPage;
 
-    const groups = this.oauthGroups
+    const groups = Object.values(this.oauthGroups)
       .filter(group => !filter || group.name.toLowerCase().includes(filter.toLowerCase()) || group.address.includes(filter.toLowerCase()));
 
     this.totalGroups = groups.length;
@@ -679,20 +679,26 @@ class RootStore {
   @action.bound
   SyncOAuth = flow(function * () {
     try {
-      const groups = (yield this.QueryOAuthAPI("groups"))
-        .map(group => ({
-          type: "oauthGroup",
-          address: group.id,
-          name: group.profile.name,
-          description: group.profile.description
-        }));
+      let groups = {};
+      (yield this.QueryOAuthAPI("groups"))
+        .map(group => {
+          groups[group.id] = {
+            type: "oauthGroup",
+            address: group.id,
+            name: group.profile.name,
+            description: group.profile.description
+          };
+        });
 
-      const users = (yield this.QueryOAuthAPI("users"))
-        .map(user => ({
-          type: "oauthUser",
-          address: user.id,
-          name: `${user.profile.firstName} ${user.profile.lastName} (${user.profile.email})`
-        }));
+      let users = {};
+      (yield this.QueryOAuthAPI("users"))
+        .map(user => {
+          users[user.id] = {
+            type: "oauthUser",
+            address: user.id,
+            name: `${user.profile.firstName} ${user.profile.lastName} (${user.profile.email})`
+          };
+        });
 
       const writeToken = yield this.WriteToken();
 
@@ -777,6 +783,25 @@ class RootStore {
     if(oauthSyncHash) {
       let oauthSync = (yield this.client.DownloadPart({...params, partHash: oauthSyncHash, format: "text"}));
       oauthSync = JSON.parse(Buffer.from(oauthSync));
+
+      // Convert from old format
+      if(Array.isArray(oauthSync.users)) {
+        let users = {};
+        oauthSync.users.map(user => {
+          users[user.address] = user;
+        });
+
+        oauthSync.users = users;
+      }
+
+      if(Array.isArray(oauthSync.groups)) {
+        let groups = {};
+        oauthSync.groups.map(group => {
+          groups[group.address] = group;
+        });
+
+        oauthSync.groups = groups;
+      }
 
       this.oauthUsers = oauthSync.users;
       this.oauthGroups = oauthSync.groups;
@@ -892,7 +917,7 @@ class RootStore {
           (authSpec[titleId].permissions || []).map(async loadedPermissions => {
             const profile = loadedPermissions.profile;
             let type = loadedPermissions.subject.type;
-            let id = loadedPermissions.subject.id;
+            let id = loadedPermissions.subject.oauth_id || loadedPermissions.subject.id;
             if(type === "group") {
               type = "fabricGroup";
               id = this.client.utils.HashToAddress(id);
@@ -980,20 +1005,32 @@ class RootStore {
         permissionSpec[titleId].permissions = Object.keys(this.titlePermissions[titleId] || {}).map(id => {
           const permission = this.titlePermissions[titleId][id];
 
+          let itemPermission = { profile: permission.profile };
+
           let type = permission.type;
           if(type === "fabricGroup") {
-            type = "group";
-            id = `igrp${this.client.utils.AddressToHash(id)}`;
+            itemPermission.subject = {
+              id: `igrp${this.client.utils.AddressToHash(id)}`,
+              type: "group"
+            };
           } else if(type === "oauthGroup") {
-            type = "oauth_group";
+            itemPermission.subject = {
+              id: this.OAuthGroupInfo(id).name,
+              oauth_id: id,
+              type: "oauth_group"
+            };
           } else if(type === "fabricUser") {
-            type = "user";
-            id =`iusr${this.client.utils.AddressToHash(id)}`;
+            itemPermission.subject = {
+              id: `iusr${this.client.utils.AddressToHash(id)}`,
+              type: "user"
+            };
           } else if(type === "oauthUser") {
-            type = "oauth_user";
+            itemPermission.subject = {
+              id: this.OAuthUserInfo(id).name,
+              oauth_id: id,
+              type: "oauth_user"
+            };
           }
-
-          let itemPermission = { profile: permission.profile, subject: { id, type } };
 
           if(permission.startTime) { itemPermission.start = DateTime.fromMillis(permission.startTime).toUTC().toISO(); }
           if(permission.endTime) { itemPermission.end = DateTime.fromMillis(permission.endTime).toUTC().toISO(); }
