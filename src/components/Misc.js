@@ -1,4 +1,5 @@
 import React from "react";
+import {DateTime} from "luxon";
 import {Confirm, IconButton} from "elv-components-js";
 import {Link} from "react-router-dom";
 
@@ -54,6 +55,21 @@ export const ChangeSort = function(key, f) {
   }
 };
 
+const DATE_FORMAT = {
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+  hour12: false,
+  timeZoneName: "short"
+};
+export const FormatDate = millis => {
+  if(!millis || !isFinite(millis)) { return ""; }
+
+  return DateTime.fromMillis(millis).toLocaleString(DATE_FORMAT);
+};
+
 export const EffectiveAvailability = (startTimes, endTimes) => {
   const effectiveStartTime = Math.max(...startTimes.filter(t => t));
   const effectiveEndTime = Math.min(...endTimes.filter(t => t));
@@ -63,11 +79,7 @@ export const EffectiveAvailability = (startTimes, endTimes) => {
     if(effectiveEndTime < effectiveStartTime) {
       effectivePeriod = "None";
     } else {
-      effectivePeriod = `
-                    ${isFinite(effectiveStartTime) ? new Date(effectiveStartTime).toISOString().substring(0, 10) : ""}
-                    -
-                    ${isFinite(effectiveEndTime) ? new Date(effectiveEndTime).toISOString().substring(0, 10) : ""}
-                  `;
+      effectivePeriod = `${FormatDate(effectiveStartTime)} - ${FormatDate(effectiveEndTime)}`;
     }
   }
 

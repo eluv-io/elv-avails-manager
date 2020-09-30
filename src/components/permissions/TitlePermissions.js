@@ -49,7 +49,6 @@ class TitlePermissions extends React.Component {
         </div>
         <div className="list-entry list-header title-permission-list-entry title-permission-list-header">
           { this.SortableHeader("name", "Name") }
-          { this.SortableHeader("type", "Type") }
           { this.SortableHeader("profile", "Availability Profile") }
           { this.SortableHeader("startTime", "Start Time") }
           { this.SortableHeader("endTime", "End Time") }
@@ -70,9 +69,6 @@ class TitlePermissions extends React.Component {
                 <div className={`list-entry title-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${address}`}>
                   <div title={target.name}>
                     { target.name }
-                  </div>
-                  <div>
-                    { this.props.rootStore.FormatType(target.type) }
                   </div>
                   <div>
                     <select

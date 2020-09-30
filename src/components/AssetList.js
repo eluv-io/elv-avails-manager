@@ -1,5 +1,3 @@
-import {DateTime} from "luxon";
-
 import React from "react";
 import {Action, ImageIcon, PreviewIcon} from "elv-components-js";
 import PropTypes from "prop-types";
@@ -8,7 +6,7 @@ import PictureIcon from "../static/icons/image.svg";
 import FileIcon from "../static/icons/file.svg";
 import {Link, withRouter} from "react-router-dom";
 import PrettyBytes from "pretty-bytes";
-import {ChangeSort, SortableHeader} from "./Misc";
+import {ChangeSort, FormatDate, SortableHeader} from "./Misc";
 
 @withRouter
 class AssetList extends React.Component {
@@ -63,8 +61,6 @@ class AssetList extends React.Component {
         return <ImageIcon icon={FileIcon} title="File" />;
       }
     };
-
-    const FormatDate = millis => millis ? DateTime.fromMillis(millis).toISO({suppressMilliseconds: true}) : "";
 
     if(!this.props.selectable) {
       return (

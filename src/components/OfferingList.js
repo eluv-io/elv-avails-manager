@@ -1,9 +1,7 @@
-import {DateTime} from "luxon";
-
 import React from "react";
 import PropTypes from "prop-types";
 import {withRouter} from "react-router-dom";
-import {ChangeSort, SortableHeader} from "./Misc";
+import {ChangeSort, FormatDate, SortableHeader} from "./Misc";
 import {Action} from "elv-components-js";
 
 @withRouter
@@ -41,8 +39,6 @@ class OfferingList extends React.Component {
   }
 
   OfferingEntry(offering, index) {
-    const FormatDate = millis => millis ? DateTime.fromMillis(millis).toISO({suppressMilliseconds: true}) : "";
-
     const isSelected = this.state.selected.find(entry => entry.offeringKey === offering.offeringKey);
     return (
       <div

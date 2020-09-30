@@ -23,7 +23,7 @@ class ContentStore {
   }
 
   @action.bound
-  LoadSiteTitles = flow(function * ({siteId, page=1, perPage=10, filter=""}) {
+  LoadSiteTitles = flow(function * ({siteId, page=1, perPage=100, filter=""}) {
     const site = this.rootStore.sites.find(site => site.objectId === siteId);
 
     if(!site) { throw Error("Site not found"); }
@@ -43,15 +43,15 @@ class ContentStore {
         linkPath: "public/search",
         queryParams: {
           select: ["public/asset_metadata/title", "public/asset_metadata/display_title"],
-          terms: `(f_asset_type:primary${filter ? ` AND f_display_title:${filter}`: ""})`,
+          terms: `(f_asset_type:primary${filter ? ` AND f_display_title:${encodeURIComponent(filter)}`: ""})`,
           start: startIndex,
-          limit: perPage
+          limit: this.objectsPerPage
         }
       });
 
       this.sitePaginationInfo = {
         items: pagination.total,
-        limit: perPage
+        limit: this.objectsPerPage
       };
 
       this.siteTitles = results.map(title => ({

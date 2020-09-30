@@ -194,11 +194,11 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 }
 
 .title-profile-list-entry {
-  grid-template-columns: 1fr 1fr 1fr 2fr 2fr 5rem;
+  grid-template-columns: 1fr 1fr 1fr 1.5fr 1.5fr 5rem;
 }
 
 .title-permission-list-entry {
-  grid-template-columns: 2fr 1fr 2fr 2fr 2fr 2fr 5rem;
+  grid-template-columns: 2fr 2fr 2.3fr 2.3fr 3fr 5rem;
 }
 
 .target-permission-list-entry {
