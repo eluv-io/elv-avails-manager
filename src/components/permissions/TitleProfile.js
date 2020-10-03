@@ -78,6 +78,9 @@ class TitleProfile extends React.Component {
   }
 
   render() {
+    const removable = !Object.keys(this.props.rootStore.titlePermissions[this.props.objectId])
+      .find(address => this.props.rootStore.titlePermissions[this.props.objectId][address].profile === this.props.profile);
+
     return (
       <React.Fragment>
         <div className={`list-entry title-profile-list-entry ${typeof this.props.index !== "undefined" ? (this.props.index % 2 === 0 ? "even" : "odd") : ""}`}>
@@ -92,8 +95,9 @@ class TitleProfile extends React.Component {
           </div>
           <div className="actions-cell">
             <DeleteButton
+              disabled={!removable}
               confirm="Are you sure you want to remove this profile?"
-              title={`Remove ${this.props.profile}`}
+              title={removable ? `Remove ${this.props.profile}` : "Unable to delete profiles with active permissions"}
               Delete={() => this.props.rootStore.RemoveTitleProfile(this.props.objectId, this.props.profile)}
             />
           </div>

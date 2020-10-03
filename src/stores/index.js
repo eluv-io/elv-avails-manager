@@ -352,6 +352,12 @@ class RootStore {
   @action.bound
   RemoveTitleProfile(objectId, name) {
     delete this.titleProfiles[objectId][name];
+
+    Object.keys(this.titlePermissions[objectId]).forEach(address => {
+      if(this.titlePermissions[objectId][address].profile === name) {
+        delete this.titlePermissions[objectId][address];
+      }
+    });
   }
 
   @action.bound
@@ -537,10 +543,15 @@ class RootStore {
       this.titlePermissions[objectId] = {};
     }
 
+    const profiles = Object.keys(this.titleProfiles[objectId])
+      .sort((a, b) => a.toLowerCase() < b.toLowerCase() ? -1 : 1);
+    const defaultProfile =
+      profiles.find(profile => profile.toLowerCase() === "default" ? profile : undefined) || profiles[0];
+
     if(!this.titlePermissions[objectId][address]) {
       this.titlePermissions[objectId][address] = {
         type,
-        profile: "default",
+        profile: defaultProfile,
         startTime: undefined,
         endTime: undefined
       };
@@ -947,7 +958,7 @@ class RootStore {
               if(loadedPermissions.end) {
                 this.titlePermissions[titleId][id].endTime = DateTime.fromISO(loadedPermissions.end).toMillis();
               }
-            } catch(error) {
+            } catch (error) {
               this.SetError(`Failed to load permission on ${titleId} for ${loadedPermissions.subject.type.replace("_", " ")} ${loadedPermissions.subject.id}`);
               // eslint-disable-next-line no-console
               console.error(`Failed to load permission on ${titleId} for ${loadedPermissions.subject.type.replace("_", " ")} ${loadedPermissions.subject.id}`);

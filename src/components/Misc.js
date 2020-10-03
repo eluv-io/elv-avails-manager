@@ -15,12 +15,13 @@ export const BackButton = ({to}) => (
   </Link>
 );
 
-export const DeleteButton = ({Delete, confirm, title="Remove", className=""}) => {
+export const DeleteButton = ({Delete, confirm, title="Remove", className="", disabled=false}) => {
   if(!confirm) { confirm = "Are you sure you want to remove this item?"; }
 
   return (
     <IconButton
       icon={DeleteIcon}
+      disabled={disabled}
       onClick={
         async event => {
           event.preventDefault();
