@@ -65,6 +65,8 @@ class TitlePermissions extends React.Component {
               const Update = (key, value) => this.props.rootStore.SetTitlePermissionAccess(this.props.objectId, address, key, value);
               const profile = this.props.rootStore.titleProfiles[this.props.objectId][permissions.profile];
 
+              if(!profile) { return null; }
+
               return (
                 <div className={`list-entry title-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${address}`}>
                   <div title={target.name}>
