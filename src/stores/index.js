@@ -696,8 +696,8 @@ class RootStore {
           groups[group.id] = {
             type: "oauthGroup",
             address: group.id,
-            name: group.profile.name,
-            description: group.profile.description
+            name: group.profile.name || group.id,
+            description: group.profile.description || ""
           };
         });
 

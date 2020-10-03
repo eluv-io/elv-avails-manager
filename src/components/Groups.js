@@ -162,7 +162,7 @@ class Groups extends React.Component {
           </div>
           {
             Object.values(this.props.rootStore.allGroups)
-              .filter(({name, description}) => !this.state.filter || (name.toLowerCase().includes(this.state.filter.toLowerCase()) || description.toLowerCase().includes(this.state.filter.toLowerCase())))
+              .filter(({name, description}) => !this.state.filter || ((name || "").toLowerCase().includes(this.state.filter.toLowerCase()) || (description || "").toLowerCase().includes(this.state.filter.toLowerCase())))
               .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
               .map(({type, address, name, description}, i) => {
                 const contents = (
