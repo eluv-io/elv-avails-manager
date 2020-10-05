@@ -43,9 +43,10 @@ class TargetPermissions extends React.Component {
             .map((titlePermission, index) => {
               const Update = (key, value) => this.props.rootStore.SetTitlePermissionAccess(titlePermission.objectId, this.props.target.address, key, value);
               const profile = this.props.rootStore.titleProfiles[titlePermission.objectId][titlePermission.profile];
+              if(!profile) { return null; }
 
               return (
-                <div className={`list-entry target-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${this.props.target.address}`}>
+                <div className={`list-entry target-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${this.props.target.address}-${titlePermission.objectId}`}>
                   <div className="small-font" title={titlePermission.name}>
                     <Link to={UrlJoin("/titles", titlePermission.objectId)} className="title-link">
                       <ImageIcon icon={LinkIcon} />
