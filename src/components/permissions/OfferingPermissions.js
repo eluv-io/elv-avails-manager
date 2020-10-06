@@ -199,7 +199,7 @@ class OfferingPermissions extends React.Component {
 
         <div className="page-header">
           <BackButton to={backPath} />
-          <h1>{ this.Title().title } | Offering Permissions | { this.props.match.params.profile }</h1>
+          <h1>{ this.Title().display_title } | Offering Permissions | { this.props.match.params.profile }</h1>
         </div>
 
         <Selection

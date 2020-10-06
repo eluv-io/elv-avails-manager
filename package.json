@@ -39,6 +39,7 @@
     "react-dom": "^16.8.6",
     "react-router": "^5.1.2",
     "react-router-dom": "^5.1.2",
+    "trie-search": "^1.2.11",
     "urijs": "^1.19.1",
     "url-join": "^4.0.1"
   },

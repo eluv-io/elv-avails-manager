@@ -3,6 +3,7 @@ import {DateTime} from "luxon";
 import URI from "urijs";
 import {Buffer} from "buffer";
 import {Settings} from "luxon";
+import Trie from "trie-search";
 
 import {FrameClient} from "@eluvio/elv-client-js/src/FrameClient";
 import ContentStore from "./Content";
@@ -38,6 +39,7 @@ class RootStore {
 
   // Things with permissions
   @observable allTitles = {};
+
   @observable allGroups = {};
   @observable allUsers = {};
   @observable allOAuthGroups = {};
@@ -61,7 +63,17 @@ class RootStore {
 
   @computed get titles() {
     return Object.values(this.allTitles)
-      .sort((a, b) => a.title < b.title ? -1 : 1);
+      .sort((a, b) => a.display_title < b.display_title ? -1 : 1);
+  }
+
+  @computed get titlesTrie() {
+    const trie = new Trie();
+    let titles = {};
+    this.titles.forEach(title => titles[title.display_title] = title);
+
+    trie.addFromObject(titles);
+
+    return trie;
   }
 
   targetTitleIds(address) {
@@ -74,7 +86,7 @@ class RootStore {
 
     return Object.values(this.allTitles)
       .filter(title => titleIds.has(title.objectId))
-      .sort((a, b) => a.title < b.title ? -1 : 1);
+      .sort((a, b) => a.display_title < b.display_title ? -1 : 1);
   }
 
   targetTitlePermissions(address) {
@@ -197,31 +209,28 @@ class RootStore {
   }
 
   @action.bound
-  AddTitle = flow(function * ({libraryId, objectId, defaultProfiles=true}) {
+  AddTitle = flow(function * ({objectId, defaultProfiles=true, display_title, lookupDisplayTitle=false}) {
     if(this.allTitles[objectId]) { return; }
 
-    if(!libraryId) {
-      libraryId = yield this.client.ContentObjectLibraryId({objectId});
+    if(!display_title && lookupDisplayTitle) {
+      const metadata = (yield this.client.ContentObjectMetadata({
+        libraryId: yield this.client.ContentObjectLibraryId({objectId}),
+        objectId,
+        select: [
+          "public/name",
+          "public/asset_metadata/title",
+          "public/asset_metadata/display_title"
+        ]
+      })) || {};
+
+      const assetMetadata = (metadata.public || {}).asset_metadata || {};
+      display_title = assetMetadata.display_title || assetMetadata.title || (metadata.public || {}).name;
     }
 
-    let metadata = (yield this.client.ContentObjectMetadata({
-      libraryId,
-      objectId,
-      select: [
-        "public/name",
-        "public/asset_metadata/title",
-        "public/asset_metadata/display_title",
-        "public/asset_metadata/title"
-      ]
-    })) || {};
-
-    metadata = {public: {asset_metadata: {title: objectId}}, ...metadata};
-
     this.allTitles[objectId] = {
-      libraryId,
       objectId,
-      title: this.SafeTraverse(metadata, "public/asset_metadata/display_title") || this.SafeTraverse(metadata, "public/asset_metadata/title"),
-      metadata
+      display_title: display_title || objectId,
+      metadata: {public: {}}
     };
 
     if(!this.titleProfiles[objectId]) {
@@ -231,8 +240,6 @@ class RootStore {
         this.titleProfiles[objectId] = {};
       }
     }
-
-    return this.allTitles[objectId];
   });
 
   @action.bound
@@ -246,19 +253,24 @@ class RootStore {
   LoadFullTitle = flow(function * ({objectId, defaultProfiles=true}) {
     let currentTitle = this.allTitles[objectId];
 
+    const libraryId = yield this.client.ContentObjectLibraryId({objectId});
+
     if(!currentTitle) {
-      currentTitle = yield this.AddTitle({objectId, defaultProfiles});
+      currentTitle = this.AddTitle({objectId, defaultProfiles});
     } else if(currentTitle.fullyLoaded) {
       // Already loaded
       return;
     }
 
     let metadata = (yield this.client.ContentObjectMetadata({
-      libraryId: currentTitle.libraryId,
+      libraryId,
       objectId,
       select: [
         "offerings",
         "assets",
+        "public/name",
+        "public/asset_metadata/title",
+        "public/asset_metadata/display_title",
         "public/asset_metadata/sources",
         "public/asset_metadata/ip_title_id",
         "public/asset_metadata/synopsis",
@@ -266,7 +278,14 @@ class RootStore {
       ]
     })) || {};
 
-    metadata = {public: {asset_metadata: {title: objectId}}, ...metadata};
+    if(!metadata.public) { metadata.public = {}; }
+    if(!metadata.public.asset_metadata) { metadata.public.asset_metadata = {}; }
+
+    this.allTitles[objectId].display_title =
+      metadata.public.asset_metadata.display_title ||
+      metadata.public.asset_metadata.title ||
+      metadata.public.name ||
+      objectId;
 
     if(metadata.assets) {
       Object.keys(metadata.assets).forEach(key => metadata.assets[key].assetKey = key);
@@ -303,7 +322,7 @@ class RootStore {
     };
 
     this.allTitles[objectId].baseUrl = yield this.client.FabricUrl({
-      libraryId: currentTitle.libraryId,
+      libraryId,
       objectId
     });
 
@@ -331,6 +350,10 @@ class RootStore {
           }));
       }
     });
+
+    if(!this.titlePermissions[objectId]) {
+      this.titlePermissions[objectId] = {};
+    }
 
     this.allTitles[objectId].fullyLoaded = true;
   });
@@ -451,32 +474,59 @@ class RootStore {
 
   @action.bound
   LoadUser(address, type, name) {
-    if(type === "fabricUser") {
-      address = this.client.utils.FormatAddress(address);
+    try {
+      if(type === "fabricUser") {
+        address = this.client.utils.FormatAddress(address);
 
-      this.allUsers[address] = {
+        this.allUsers[address] = {
+          type,
+          name: name || address,
+          address
+        };
+      } else {
+        this.allUsers[address] = this.OAuthUserInfo(address);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load group:");
+      // eslint-disable-next-line no-console
+      console.error(error);
+
+      this.allusers[address] = {
         type,
+        address,
         name: name || address,
-        address
+        description: ""
       };
-    } else {
-      this.allUsers[address] = this.OAuthUserInfo(address);
     }
   }
 
   @action.bound
-  LoadGroup = flow(function * (address, type) {
-    if(type === "fabricGroup") {
-      this.allGroups[address] = yield this.GroupInfo(address);
-    } else {
-      this.allGroups[address] = this.OAuthGroupInfo(address);
+  LoadGroup = flow(function * (address, type, name) {
+    try {
+      if(type === "fabricGroup") {
+        this.allGroups[address] = yield this.GroupInfo(address);
+      } else {
+        this.allGroups[address] = this.OAuthGroupInfo(address);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load group:");
+      // eslint-disable-next-line no-console
+      console.error(error);
+      this.allGroups[address] = {
+        type,
+        address,
+        name: name || address,
+        description: ""
+      };
     }
   });
 
   // Page/Sort/Filter users and groups
 
   @action.bound
-  LoadOAuthUsers({page=1, perPage=10, filter=""}) {
+  LoadOAuthUsers({page=1, perPage=100, filter=""}) {
     const startIndex = (page - 1) * perPage;
 
     const users = Object.values(this.oauthUsers)
@@ -488,7 +538,7 @@ class RootStore {
   }
 
   @action.bound
-  LoadGroups = flow(function * ({page=1, perPage=10, filter=""}) {
+  LoadGroups = flow(function * ({page=1, perPage=100, filter=""}) {
     const startIndex = (page - 1) * perPage;
     const groupAddresses = (yield this.client.Collection({collectionType: "accessGroups"}));
 
@@ -513,7 +563,7 @@ class RootStore {
   });
 
   @action.bound
-  LoadOAuthGroups({page=1, perPage=10, filter=""}) {
+  LoadOAuthGroups({page=1, perPage=100, filter=""}) {
     if(!this.oauthGroups) { return; }
 
     const startIndex = (page - 1) * perPage;
@@ -543,12 +593,12 @@ class RootStore {
       this.titlePermissions[objectId] = {};
     }
 
-    const profiles = Object.keys(this.titleProfiles[objectId])
-      .sort((a, b) => a.toLowerCase() < b.toLowerCase() ? -1 : 1);
-    const defaultProfile =
-      profiles.find(profile => profile.toLowerCase() === "default" ? profile : undefined) || profiles[0];
-
     if(!this.titlePermissions[objectId][address]) {
+      const profiles = Object.keys(this.titleProfiles[objectId])
+        .sort((a, b) => a.toLowerCase() < b.toLowerCase() ? -1 : 1);
+      const defaultProfile =
+        profiles.find(profile => profile.toLowerCase() === "default" ? profile : undefined) || profiles[0];
+
       this.titlePermissions[objectId][address] = {
         type,
         profile: defaultProfile,
@@ -839,10 +889,10 @@ class RootStore {
     if(!authSpec) { return; }
 
     yield this.client.utils.LimitedMap(
-      10,
+      20,
       Object.keys(authSpec),
       async titleId => {
-        await this.AddTitle({objectId: titleId, defaultProfiles: false});
+        this.AddTitle({objectId: titleId, defaultProfiles: false, display_title: authSpec[titleId].display_title});
 
         runInAction(() => {
           const profiles = Object.keys(authSpec[titleId].profiles);
@@ -936,7 +986,7 @@ class RootStore {
                 await this.LoadGroup(id, type);
               } else if(type === "oauth_group") {
                 type = "oauthGroup";
-                await this.LoadGroup(id, type);
+                await this.LoadGroup(id, type, loadedPermissions.subject.id);
               } else if(type === "user") {
                 type = "fabricUser";
                 id = this.client.utils.HashToAddress(id);
@@ -944,7 +994,7 @@ class RootStore {
                 this.LoadUser(id, type, name);
               } else if(type === "oauth_user") {
                 type = "oauthUser";
-                this.LoadUser(id, type);
+                this.LoadUser(id, type, loadedPermissions.subject.id);
               }
 
               this.titlePermissions[titleId][id] = {
@@ -979,7 +1029,11 @@ class RootStore {
       Object.keys(this.titleProfiles).forEach(titleId => {
         // Profiles
 
-        permissionSpec[titleId] = {profiles: {}, permissions: []};
+        permissionSpec[titleId] = {
+          display_title: this.allTitles[titleId].display_title,
+          profiles: {},
+          permissions: []
+        };
 
         Object.keys(this.titleProfiles[titleId]).forEach(profileName => {
           const profile = this.titleProfiles[titleId][profileName];

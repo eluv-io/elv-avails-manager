@@ -16,7 +16,7 @@ class GroupBrowser extends React.Component {
 
     this.state = {
       page: 1,
-      perPage: 10,
+      perPage: 100,
       filter: "",
       loading: false
     };
