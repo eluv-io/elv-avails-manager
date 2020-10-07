@@ -1,13 +1,17 @@
 import React from "react";
-import {Action, Modal} from "elv-components-js";
+import {Action, DateSelection, ImageIcon, Modal} from "elv-components-js";
 import ContentBrowser from "./ContentBrowser";
 import {inject, observer} from "mobx-react";
 import UrlJoin from "url-join";
 import {Link} from "react-router-dom";
-import {BackButton, ChangeSort, DeleteButton, SortableHeader} from "./Misc";
+import {
+  BackButton,
+  DeleteButton, EffectiveAvailability,
+  InitPSF
+} from "./Misc";
 import Path from "path";
 import AsyncComponent from "./AsyncComponent";
-import TargetPermissions from "./permissions/TargetPermissions";
+import LinkIcon from "../static/icons/link.svg";
 
 @inject("rootStore")
 @observer
@@ -15,26 +19,13 @@ class Titles extends React.Component {
   constructor(props) {
     super(props);
 
-    this.state = {
-      page: 1,
-      perPage: 100,
-      filter: "",
-      activeFilter: "",
-      sortKey: "display_title",
-      sortAsc: true
-    };
-
     this.Content = this.Content.bind(this);
     this.AddTitles = this.AddTitles.bind(this);
     this.CloseModal = this.CloseModal.bind(this);
     this.ActivateModal = this.ActivateModal.bind(this);
 
-    this.SortableHeader = SortableHeader.bind(this);
-    this.ChangeSort = ChangeSort.bind(this);
-  }
-
-  SetPage(page) {
-    this.setState({page});
+    this.InitPSF = InitPSF.bind(this);
+    this.InitPSF({sortKey: "displayTitle", perPage: this.Target() ? 10 : 100});
   }
 
   User() {
@@ -53,50 +44,110 @@ class Titles extends React.Component {
     return this.Group() || this.User();
   }
 
-  TitleList() {
-    if(this.Target()) {
-      return <TargetPermissions permissions={this.props.rootStore.targetTitlePermissions(this.Target().address)} target={this.Target()} filter={this.state.filter} />;
-    }
+  TargetPermissions() {
+    const permissions = this.props.rootStore.targetTitlePermissions(this.Target().address)
+      .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
+      .filter(title => !this.state.activeFilter || title.displayTitle.toLowerCase().includes(this.state.activeFilter));
 
+    return (
+      <React.Fragment>
+        { this.PageControls(permissions.length) }
+        <div className="list title-profile-list">
+          <div className="list-entry list-header target-permission-list-entry title-permission-list-header">
+            { this.SortableHeader("displayTitle", "Title") }
+            { this.SortableHeader("profile", "Availability Profile") }
+            { this.SortableHeader("startTime", "Start Time") }
+            { this.SortableHeader("endTime", "End Time") }
+            <div>Availability</div>
+            <div />
+          </div>
+          {
+            this.Paged(permissions)
+              .map((titlePermission, index) => {
+                const Update = (key, value) => this.props.rootStore.SetTitlePermissionAccess(titlePermission.objectId, this.Target().address, key, value);
+                const profile = this.props.rootStore.titleProfiles[titlePermission.objectId][titlePermission.profile];
+
+                if(!profile) { return null; }
+
+                return (
+                  <div className={`list-entry target-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${this.Target().address}-${titlePermission.objectId}`}>
+                    <div className="small-font" title={titlePermission.displayTitle}>
+                      <Link to={UrlJoin("/titles", titlePermission.objectId)} className="title-link">
+                        <ImageIcon icon={LinkIcon} />
+                      </Link>
+                      { titlePermission.displayTitle }
+                    </div>
+                    <div>
+                      <select
+                        value={titlePermission.profile}
+                        onChange={event => Update("profile", event.target.value)}
+                      >
+                        {
+                          Object.keys(this.props.rootStore.titleProfiles[titlePermission.objectId]).map(profile =>
+                            <option key={`profile-${profile}`} value={profile}>{ profile }</option>
+                          )
+                        }
+                      </select>
+                    </div>
+                    <div>
+                      <DateSelection readOnly noLabel value={titlePermission.startTime} onChange={dateTime => Update("startTime", dateTime)} />
+                    </div>
+                    <div>
+                      <DateSelection readOnly noLabel value={titlePermission.endTime} onChange={dateTime => Update("endTime", dateTime)} />
+                    </div>
+                    <div className="small-font">
+                      { EffectiveAvailability([profile.startTime, titlePermission.startTime], [profile.endTime, titlePermission.endTime])}
+                    </div>
+                    <div className="actions-cell">
+                      <DeleteButton
+                        confirm="Are you sure you want to remove this title?"
+                        title={`Remove ${titlePermission.displayTitle}`}
+                        Delete={() => this.props.rootStore.RemoveTitlePermission(titlePermission.objectId, this.Target().address)}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+          }
+        </div>
+      </React.Fragment>
+    );
+  }
+
+  TitleList() {
     const titles = !this.state.activeFilter ?
       this.props.rootStore.titles :
       this.props.rootStore.titlesTrie.get(this.state.activeFilter).map(result => result.value);
 
-    const startIndex = (this.state.page - 1) * this.state.perPage + 1;
     return (
       <React.Fragment>
-        <div className="controls page-controls centered">
-          <Action disabled={this.state.page === 1} onClick={() => this.SetPage(this.state.page - 1)}>Previous</Action>
-          { startIndex } - { Math.min(titles.length, startIndex + this.state.perPage - 1) } of { titles.length }
-          <Action disabled={this.state.page * (this.state.perPage + 1) > titles.length} onClick={() => this.SetPage(this.state.page + 1)}>Next</Action>
-        </div>
+        { this.PageControls(titles.length) }
         <div className="list titles-list">
           <div className="list-entry titles-list-entry list-header titles-list-header">
-            { this.SortableHeader("display_title", "Title")}
+            { this.SortableHeader("displayTitle", "Title")}
             <div>Permissions</div>
             <div />
           </div>
           {
-            titles
-              .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
-              .slice(startIndex, startIndex + this.state.perPage)
-              .map((title, index) =>
-                <Link
-                  key={`title-entry-${title.objectId}`}
-                  to={UrlJoin(this.props.location.pathname, title.objectId)}
-                  className={`list-entry titles-list-entry ${index % 2 === 0 ? "even" : "odd"}`}
-                >
-                  <div>{ title.display_title }</div>
-                  <div>{ Object.keys(this.props.rootStore.titlePermissions[title.objectId] || {}).length }</div>
-                  <div className="actions-cell">
-                    <DeleteButton
-                      confirm="Are you sure you want to remove this title?"
-                      title={`Remove ${title.title}`}
-                      Delete={() => this.props.rootStore.RemoveTitle(title.objectId)}
-                    />
-                  </div>
-                </Link>
-              )
+            this.Paged(
+              titles.sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
+            ).map((title, index) =>
+              <Link
+                key={`title-entry-${title.objectId}`}
+                to={UrlJoin(this.props.location.pathname, title.objectId)}
+                className={`list-entry titles-list-entry ${index % 2 === 0 ? "even" : "odd"}`}
+              >
+                <div>{ title.displayTitle }</div>
+                <div>{ Object.keys(this.props.rootStore.titlePermissions[title.objectId] || {}).length }</div>
+                <div className="actions-cell">
+                  <DeleteButton
+                    confirm="Are you sure you want to remove this title?"
+                    title={`Remove ${title.title}`}
+                    Delete={() => this.props.rootStore.RemoveTitle(title.objectId)}
+                  />
+                </div>
+              </Link>
+            )
           }
         </div>
       </React.Fragment>
@@ -114,20 +165,10 @@ class Titles extends React.Component {
 
         <div className="controls">
           <Action onClick={this.ActivateModal}>Add Titles</Action>
-          <input
-            className="filter"
-            name="filter"
-            value={this.state.filter}
-            onChange={event => {
-              clearTimeout(this.filterTimeout);
-              this.setState({filter: event.target.value});
-              this.filterTimeout = setTimeout(() => this.setState({activeFilter: this.state.filter, page: 1}), 500);
-            } }
-            placeholder="Filter Titles..."
-          />
+          { this.Filter("Filter Titles...") }
         </div>
 
-        { this.TitleList() }
+        { this.Target() ? this.TargetPermissions() : this.TitleList() }
       </div>
     );
   }

@@ -236,7 +236,8 @@ button {
   align-items: center;
   display: flex;
   margin-bottom: $elv-spacing-s;
-  min-height: 2rem;
+  max-height: 2.5rem;
+  min-height: 2.5rem;
   padding: 0.25rem 0;
   position: relative;
   width: 100%;

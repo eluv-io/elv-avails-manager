@@ -6,7 +6,7 @@ import {Link} from "react-router-dom";
 import PropTypes from "prop-types";
 import {Action, LoadingElement, Modal} from "elv-components-js";
 
-import {ChangeSort, DeleteButton, SortableHeader} from "./Misc";
+import {DeleteButton, InitPSF} from "./Misc";
 
 @inject("rootStore")
 @observer
@@ -14,15 +14,11 @@ class GroupBrowser extends React.Component {
   constructor(props) {
     super(props);
 
-    this.state = {
-      page: 1,
-      perPage: 100,
-      filter: "",
-      loading: false
-    };
-
     this.UpdateFilter = this.UpdateFilter.bind(this);
     this.Load = this.Load.bind(this);
+
+    this.InitPSF = InitPSF.bind(this);
+    this.InitPSF({sortKey: "name", additionalState: { loading: false }});
   }
 
   componentDidMount() {
@@ -54,10 +50,6 @@ class GroupBrowser extends React.Component {
     }
   }
 
-  SetPage(page) {
-    this.setState({page: page}, this.Load);
-  }
-
   UpdateFilter(event) {
     clearTimeout(this.filterTimeout);
 
@@ -67,20 +59,16 @@ class GroupBrowser extends React.Component {
   }
 
   render() {
-    const totalGroups = this.props.rootStore.totalGroups;
-    const startIndex = (this.state.page - 1) * this.state.perPage + 1;
     return (
       <div className="group-browser">
         <h1>Add a Group</h1>
         <div className="controls">
           <Action className="secondary" onClick={this.props.onCancel}>Cancel</Action>
-          <input className="filter" name="filter" value={this.state.filter} onChange={this.UpdateFilter} placeholder="Filter Groups..."/>
+          { this.Filter("Filter Groups...", this.Load) }
         </div>
-        <div className="controls page-controls centered">
-          <Action disabled={this.state.page === 1} onClick={() => this.SetPage(this.state.page - 1)}>Previous</Action>
-          { startIndex } - { Math.min(totalGroups, startIndex + this.state.perPage - 1) } of { totalGroups }
-          <Action disabled={this.state.page * (this.state.perPage + 1) > totalGroups} onClick={() => this.SetPage(this.state.page + 1)}>Next</Action>
-        </div>
+
+        { this.PageControls(this.props.rootStore.totalGroups, this.Load) }
+
         <LoadingElement loading={this.state.loading}>
           <div className="list">
             <div className="list-entry list-header groups-browse-list-entry">
@@ -119,22 +107,19 @@ class Groups extends React.Component {
   constructor(props) {
     super(props);
 
-    this.state = {
-      filter: "",
-      sortKey: "name",
-      sortAsc: true,
-      modal: null
-    };
-
-    this.SortableHeader = SortableHeader.bind(this);
-    this.ChangeSort = ChangeSort.bind(this);
-
     this.AddGroup = this.AddGroup.bind(this);
     this.CloseModal = this.CloseModal.bind(this);
     this.ActivateModal = this.ActivateModal.bind(this);
+
+    this.InitPSF = InitPSF.bind(this);
+    this.InitPSF({sortKey: "name", additionalState: { modal: null }});
   }
 
   render() {
+    const groups = Object.values(this.props.rootStore.allGroups)
+      .filter(({name, description}) => !this.state.activeFilter || ((name || "").toLowerCase().includes(this.state.activeFilter.toLowerCase()) || (description || "").toLowerCase().includes(this.state.activeFilter.toLowerCase())))
+      .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1));
+
     return (
       <div className="page-container groups-page">
         { this.state.modal }
@@ -150,8 +135,11 @@ class Groups extends React.Component {
                 Add OAuth Group
               </Action> : null
           }
-          <input className="filter" name="filter" value={this.state.filter} onChange={event => this.setState({filter: event.target.value})} placeholder="Filter Groups..."/>
+          { this.Filter("Filter Groups...") }
         </div>
+
+        { this.PageControls(groups.length) }
+
         <div className="list">
           <div className={`list-entry list-header groups-list-entry ${this.props.selectable ? "list-entry-selectable" : ""}`}>
             { this.SortableHeader("name", "Name") }
@@ -161,48 +149,45 @@ class Groups extends React.Component {
             { this.props.selectable ? null : <div /> }
           </div>
           {
-            Object.values(this.props.rootStore.allGroups)
-              .filter(({name, description}) => !this.state.filter || ((name || "").toLowerCase().includes(this.state.filter.toLowerCase()) || (description || "").toLowerCase().includes(this.state.filter.toLowerCase())))
-              .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
-              .map(({type, address, name, description}, i) => {
-                const contents = (
-                  <React.Fragment>
-                    <div title={address}>{ name }</div>
-                    <div title={type}>{ this.props.rootStore.FormatType(type) }</div>
-                    <div className="small-font">{ description }</div>
-                    <div>{ this.props.rootStore.targetTitles(address).length }</div>
-                  </React.Fragment>
-                );
+            this.Paged(groups).map(({type, address, name, description}, i) => {
+              const contents = (
+                <React.Fragment>
+                  <div title={address}>{ name }</div>
+                  <div title={type}>{ this.props.rootStore.FormatType(type) }</div>
+                  <div className="small-font">{ description }</div>
+                  <div>{ this.props.rootStore.targetTitleIds(address).length }</div>
+                </React.Fragment>
+              );
 
-                if(this.props.selectable) {
-                  return (
-                    <div
-                      key={`groups-${address}`}
-                      className={`list-entry list-entry-selectable groups-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
-                      onClick={() => this.props.onSelect(address, type)}
-                    >
-                      { contents }
-                    </div>
-                  );
-                }
-
+              if(this.props.selectable) {
                 return (
-                  <Link
-                    to={UrlJoin("groups", type, address)}
+                  <div
                     key={`groups-${address}`}
-                    className={`list-entry groups-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
+                    className={`list-entry list-entry-selectable groups-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
+                    onClick={() => this.props.onSelect(address, type)}
                   >
                     { contents }
-                    <div className="actions-cell">
-                      <DeleteButton
-                        confirm="Are you sure you want to remove this group?"
-                        title={`Remove ${name}`}
-                        Delete={() => this.props.rootStore.RemoveTarget(address)}
-                      />
-                    </div>
-                  </Link>
+                  </div>
                 );
-              })
+              }
+
+              return (
+                <Link
+                  to={UrlJoin("groups", type, address)}
+                  key={`groups-${address}`}
+                  className={`list-entry groups-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
+                >
+                  { contents }
+                  <div className="actions-cell">
+                    <DeleteButton
+                      confirm="Are you sure you want to remove this group?"
+                      title={`Remove ${name}`}
+                      Delete={() => this.props.rootStore.RemoveTarget(address)}
+                    />
+                  </div>
+                </Link>
+              );
+            })
           }
         </div>
       </div>

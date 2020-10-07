@@ -142,7 +142,7 @@ class ContentStore {
 
         const name =
           metadata.public.asset_metadata.title ||
-          metadata.public.asset_metadata.display_title ||
+          metadata.public.asset_metadata.displayTitle ||
           metadata.public.name ||
           metadata.name ||
           "";

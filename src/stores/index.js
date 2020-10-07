@@ -63,36 +63,41 @@ class RootStore {
 
   @computed get titles() {
     return Object.values(this.allTitles)
-      .sort((a, b) => a.display_title < b.display_title ? -1 : 1);
+      .sort((a, b) => a.displayTitle < b.displayTitle ? -1 : 1);
   }
 
   @computed get titlesTrie() {
     const trie = new Trie();
     let titles = {};
-    this.titles.forEach(title => titles[title.display_title] = title);
+    this.titles.forEach(title => titles[title.displayTitle] = title);
 
     trie.addFromObject(titles);
 
     return trie;
   }
 
-  targetTitleIds(address) {
-    return Object.keys(this.titlePermissions || {})
-      .filter(objectId => this.titlePermissions[objectId][address]);
+  /* Various views on title permissions */
+
+  @computed get titlePermissionMap() {
+    let map = {};
+
+    Object.keys(this.titlePermissions || {}).forEach(objectId =>
+      Object.keys(this.titlePermissions[objectId]).forEach(address =>
+        map[address] ? map[address].push(objectId) : map[address] = [objectId]
+      )
+    );
+
+    return map;
   }
 
-  targetTitles(address) {
-    const titleIds = new Set(this.targetTitleIds(address));
-
-    return Object.values(this.allTitles)
-      .filter(title => titleIds.has(title.objectId))
-      .sort((a, b) => a.display_title < b.display_title ? -1 : 1);
+  targetTitleIds(address) {
+    return this.titlePermissionMap[address];
   }
 
   targetTitlePermissions(address) {
     return this.targetTitleIds(address).map(id => ({
       objectId: id,
-      name: this.allTitles[id].metadata.public.name,
+      displayTitle: this.allTitles[id].displayTitle,
       ...this.titlePermissions[id][address]
     }));
   }
@@ -209,10 +214,10 @@ class RootStore {
   }
 
   @action.bound
-  AddTitle = flow(function * ({objectId, defaultProfiles=true, display_title, lookupDisplayTitle=false}) {
+  AddTitle = flow(function * ({objectId, defaultProfiles=true, displayTitle, lookupDisplayTitle=false}) {
     if(this.allTitles[objectId]) { return; }
 
-    if(!display_title && lookupDisplayTitle) {
+    if(!displayTitle && lookupDisplayTitle) {
       const metadata = (yield this.client.ContentObjectMetadata({
         libraryId: yield this.client.ContentObjectLibraryId({objectId}),
         objectId,
@@ -224,12 +229,12 @@ class RootStore {
       })) || {};
 
       const assetMetadata = (metadata.public || {}).asset_metadata || {};
-      display_title = assetMetadata.display_title || assetMetadata.title || (metadata.public || {}).name;
+      displayTitle = assetMetadata.display_title || assetMetadata.title || (metadata.public || {}).name;
     }
 
     this.allTitles[objectId] = {
       objectId,
-      display_title: display_title || objectId,
+      displayTitle: displayTitle || objectId,
       metadata: {public: {}}
     };
 
@@ -281,7 +286,7 @@ class RootStore {
     if(!metadata.public) { metadata.public = {}; }
     if(!metadata.public.asset_metadata) { metadata.public.asset_metadata = {}; }
 
-    this.allTitles[objectId].display_title =
+    this.allTitles[objectId].displayTitle =
       metadata.public.asset_metadata.display_title ||
       metadata.public.asset_metadata.title ||
       metadata.public.name ||
@@ -540,7 +545,7 @@ class RootStore {
   @action.bound
   LoadGroups = flow(function * ({page=1, perPage=100, filter=""}) {
     const startIndex = (page - 1) * perPage;
-    const groupAddresses = (yield this.client.Collection({collectionType: "accessGroups"}));
+    const groupAddresses = (yield this.client.Collection({collectionType: "accessGroups"})).sort();
 
     this.totalGroups = groupAddresses.length;
 
@@ -892,10 +897,10 @@ class RootStore {
       20,
       Object.keys(authSpec),
       async titleId => {
-        this.AddTitle({objectId: titleId, defaultProfiles: false, display_title: authSpec[titleId].display_title});
+        this.AddTitle({objectId: titleId, defaultProfiles: false, displayTitle: authSpec[titleId].display_title});
 
         runInAction(() => {
-          const profiles = Object.keys(authSpec[titleId].profiles);
+          const profiles = Object.keys(authSpec[titleId].profiles || {});
           for(let i = 0; i < profiles.length; i++) {
             const profileName = profiles[i];
             const profile = authSpec[titleId].profiles[profileName];
@@ -1030,7 +1035,7 @@ class RootStore {
         // Profiles
 
         permissionSpec[titleId] = {
-          display_title: this.allTitles[titleId].display_title,
+          display_title: this.allTitles[titleId].displayTitle,
           profiles: {},
           permissions: []
         };

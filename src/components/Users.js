@@ -6,7 +6,7 @@ import {Link} from "react-router-dom";
 import PropTypes from "prop-types";
 import {Action, LabelledField, LoadingElement, Modal} from "elv-components-js";
 
-import {ChangeSort, DeleteButton, SortableHeader} from "./Misc";
+import {DeleteButton, InitPSF} from "./Misc";
 
 @inject("rootStore")
 @observer
@@ -14,18 +14,10 @@ class UsersBrowser extends React.Component {
   constructor(props) {
     super(props);
 
-    this.state = {
-      page: 1,
-      perPage: 100,
-      filter: "",
-      loading: false,
-      name: "",
-      address: "",
-      error: ""
-    };
-
-    this.UpdateFilter = this.UpdateFilter.bind(this);
     this.Load = this.Load.bind(this);
+
+    this.InitPSF = InitPSF.bind(this);
+    this.InitPSF({sortKey: "name", additionalState: { name: "", address: "", error: "", loading: false }});
   }
 
   componentDidMount() {
@@ -39,7 +31,7 @@ class UsersBrowser extends React.Component {
       this.props.rootStore.LoadOAuthUsers({
         page: this.state.page,
         perPage: this.state.perPage,
-        filter: this.state.filter
+        filter: this.state.activeFilter
       });
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -47,18 +39,6 @@ class UsersBrowser extends React.Component {
     } finally {
       this.setState({loading: false});
     }
-  }
-
-  SetPage(page) {
-    this.setState({page: page}, this.Load);
-  }
-
-  UpdateFilter(event) {
-    clearTimeout(this.filterTimeout);
-
-    this.setState({filter: event.target.value});
-
-    this.filterTimeout = setTimeout(this.Load, 1000);
   }
 
   FabricUserForm() {
@@ -108,20 +88,14 @@ class UsersBrowser extends React.Component {
       return this.FabricUserForm();
     }
 
-    const totalUsers = this.props.rootStore.totalUsers;
-    const startIndex = (this.state.page - 1) * this.state.perPage + 1;
     return (
       <div className="user-browser">
         <h1>Add a User</h1>
         <div className="controls">
           <Action className="secondary" onClick={this.props.onCancel}>Cancel</Action>
-          <input className="filter" name="filter" value={this.state.filter} onChange={this.UpdateFilter} placeholder="Filter Users..."/>
+          { this.Filter("Filter Users...", this.Load) }
         </div>
-        <div className="controls page-controls centered">
-          <Action disabled={this.state.page === 1} onClick={() => this.SetPage(this.state.page - 1)}>Previous</Action>
-          { startIndex } - { Math.min(totalUsers, startIndex + this.state.perPage - 1) } of { totalUsers }
-          <Action disabled={this.state.page * (this.state.perPage + 1) > totalUsers} onClick={() => this.SetPage(this.state.page + 1)}>Next</Action>
-        </div>
+        { this.PageControls(this.props.rootStore.totalUsers, this.Load)}
         <LoadingElement loading={this.state.loading}>
           <div className="list">
             <div className="list-entry list-header users-browse-list-entry">
@@ -158,22 +132,19 @@ class Users extends React.Component {
   constructor(props) {
     super(props);
 
-    this.state = {
-      filter: "",
-      sortKey: "name",
-      sortAsc: true,
-      modal: null
-    };
-
-    this.SortableHeader = SortableHeader.bind(this);
-    this.ChangeSort = ChangeSort.bind(this);
-
     this.AddUser = this.AddUser.bind(this);
     this.CloseModal = this.CloseModal.bind(this);
     this.ActivateModal = this.ActivateModal.bind(this);
+
+    this.InitPSF = InitPSF.bind(this);
+    this.InitPSF({sortKey: "name", additionalState: { modal: null }});
   }
 
   render() {
+    const users = Object.values(this.props.rootStore.allUsers)
+      .filter(({name}) => !this.state.activeFilter || (name.toLowerCase().includes(this.state.activeFilter.toLowerCase())))
+      .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1));
+
     return (
       <div className="page-container users-page">
         { this.state.modal }
@@ -190,8 +161,9 @@ class Users extends React.Component {
                 Add OAuth User
               </Action> : null
           }
-          <input className="filter" name="filter" value={this.state.filter} onChange={event => this.setState({filter: event.target.value})} placeholder="Filter Users..."/>
+          { this.Filter("Filter Users...") }
         </div>
+        { this.PageControls(users.length) }
         <div className="list">
           <div className={`list-entry list-header users-list-entry ${this.props.selectable ? "list-entry-selectable" : ""}`}>
             { this.SortableHeader("name", "Name") }
@@ -200,47 +172,44 @@ class Users extends React.Component {
             { this.props.selectable ? null : <div /> }
           </div>
           {
-            Object.values(this.props.rootStore.allUsers)
-              .filter(({name}) => !this.state.filter || (name.toLowerCase().includes(this.state.filter.toLowerCase())))
-              .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
-              .map(({type, address, name}, i) => {
-                const contents = (
-                  <React.Fragment>
-                    <div title={address}>{ name }</div>
-                    <div title={type}>{ this.props.rootStore.FormatType(type) }</div>
-                    <div>{ this.props.rootStore.targetTitles(address).length }</div>
-                  </React.Fragment>
-                );
+            this.Paged(users).map(({type, address, name}, i) => {
+              const contents = (
+                <React.Fragment>
+                  <div title={address}>{ name }</div>
+                  <div title={type}>{ this.props.rootStore.FormatType(type) }</div>
+                  <div>{ this.props.rootStore.targetTitlesIds(address).length }</div>
+                </React.Fragment>
+              );
 
-                if(this.props.selectable) {
-                  return (
-                    <div
-                      key={`users-${address}`}
-                      className={`list-entry list-entry-selectable users-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
-                      onClick={() => this.props.onSelect(address, type)}
-                    >
-                      {contents}
-                    </div>
-                  );
-                }
-
+              if(this.props.selectable) {
                 return (
-                  <Link
-                    to={UrlJoin("users", type, address)}
+                  <div
                     key={`users-${address}`}
-                    className={`list-entry users-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
+                    className={`list-entry list-entry-selectable users-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
+                    onClick={() => this.props.onSelect(address, type)}
                   >
-                    { contents }
-                    <div className="actions-cell">
-                      <DeleteButton
-                        confirm="Are you sure you want to remove this user?"
-                        title={`Remove ${name}`}
-                        Delete={() => this.props.rootStore.RemoveTarget(address)}
-                      />
-                    </div>
-                  </Link>
+                    {contents}
+                  </div>
                 );
-              })
+              }
+
+              return (
+                <Link
+                  to={UrlJoin("users", type, address)}
+                  key={`users-${address}`}
+                  className={`list-entry users-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
+                >
+                  { contents }
+                  <div className="actions-cell">
+                    <DeleteButton
+                      confirm="Are you sure you want to remove this user?"
+                      title={`Remove ${name}`}
+                      Delete={() => this.props.rootStore.RemoveTarget(address)}
+                    />
+                  </div>
+                </Link>
+              );
+            })
           }
         </div>
       </div>
