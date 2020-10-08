@@ -32,6 +32,10 @@ class App extends React.Component {
   constructor(props) {
     super(props);
 
+    this.state = {
+      commitMessage: ""
+    };
+
     this.Content = this.Content.bind(this);
   }
 
@@ -72,7 +76,15 @@ class App extends React.Component {
           <Action
             onClick={async () => await Confirm({
               message: "Are you sure you want to save these permissions?",
-              onConfirm: this.props.rootStore.Save
+              additionalInputs: [{
+                label: "Commit Message (optional)",
+                name: "commitMessage",
+                onChange: commitMessage => this.setState({commitMessage})
+              }],
+              onConfirm: async () => {
+                await this.props.rootStore.Save(this.state.commitMessage);
+                this.setState({commitMessage: ""});
+              }
             })}
           >
             Save

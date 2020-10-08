@@ -801,7 +801,7 @@ class RootStore {
         });
       }
 
-      yield this.Finalize();
+      yield this.Finalize("OAuth Sync");
 
       this.oauthGroups = groups;
       this.oauthUsers = users;
@@ -828,12 +828,17 @@ class RootStore {
   });
 
   @action.bound
-  Finalize = flow(function * () {
+  Finalize = flow(function * (commitMessage) {
     if(!this.writeToken) {
       throw Error("Write token not created");
     }
 
-    const {hash} = yield this.client.FinalizeContentObject({libraryId: this.libraryId, objectId: this.objectId, writeToken: this.writeToken});
+    const {hash} = yield this.client.FinalizeContentObject({
+      libraryId: this.libraryId,
+      objectId: this.objectId,
+      writeToken: this.writeToken,
+      commitMessage: commitMessage || "Permissions Manager"
+    });
 
     this.versionHash = hash;
     this.writeToken = undefined;
@@ -1027,7 +1032,7 @@ class RootStore {
   });
 
   @action.bound
-  Save = flow(function * () {
+  Save = flow(function * (commitMessage) {
     try {
       let permissionSpec = {};
 
@@ -1147,7 +1152,7 @@ class RootStore {
         }
       });
 
-      yield this.Finalize();
+      yield this.Finalize(commitMessage);
 
       this.SetMessage("Successfully saved permissions");
     } catch (error) {
