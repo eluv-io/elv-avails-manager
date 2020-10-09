@@ -28,7 +28,10 @@ class TitlePermissions extends React.Component {
     const titlePermissions = this.props.rootStore.titlePermissions[this.props.objectId] || {};
     const titlePermissionAddresses = Object.keys(titlePermissions)
       .sort((addrA, addrB) => titlePermissions[addrA][this.state.sortKey] < titlePermissions[addrB][this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
-      .filter(address => !this.state.activeFilter || (this.props.rootStore.allGroups[address] || this.props.rootStore.allUsers[address]).name.toLowerCase().includes(this.state.activeFilter));
+      .filter(address =>
+        !this.state.activeFilter ||
+        (this.props.rootStore.allGroups[address] || this.props.rootStore.allUsers[address]).name.toLowerCase().includes(this.state.activeFilter.toLowerCase())
+      );
 
     return (
       <React.Fragment>
