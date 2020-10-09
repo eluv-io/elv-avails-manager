@@ -21,7 +21,7 @@ class TitlePermissions extends React.Component {
     this.ActivateModal = this.ActivateModal.bind(this);
 
     this.InitPSF = InitPSF.bind(this);
-    this.InitPSF({sortKey: "name", perPage: 10, additionalState: { key: 1 }});
+    this.InitPSF({sortKey: "name", perPage: 10, additionalState: { version: 1 }});
   }
 
   render() {
@@ -38,7 +38,7 @@ class TitlePermissions extends React.Component {
           { this.Filter("Filter Permissions") }
         </div>
         { this.PageControls(titlePermissionAddresses.length) }
-        <div className="list title-profile-list" key={`title-profile-list-${this.state.key}`}>
+        <div className="list title-profile-list" key={`title-profile-list-${this.state.version}`}>
           { this.state.modal }
           <div className="list-entry list-header title-permission-list-entry title-permission-list-header">
             { this.SortableHeader("name", "Name") }
@@ -53,13 +53,19 @@ class TitlePermissions extends React.Component {
               .map((address, index) => {
                 const target = this.props.rootStore.allGroups[address] || this.props.rootStore.allUsers[address];
                 const permissions = titlePermissions[address];
-                const Update = (key, value) => this.props.rootStore.SetTitlePermissionAccess(this.props.objectId, address, key, value);
+                const Update = (key, value) => {
+                  this.props.rootStore.SetTitlePermissionAccess(this.props.objectId, address, key, value);
+                  this.setState({version: this.state.version + 1});
+                };
                 const profile = this.props.rootStore.titleProfiles[this.props.objectId][permissions.profile];
 
                 if(!profile) { return null; }
 
                 return (
-                  <div className={`list-entry title-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${address}`}>
+                  <div
+                    className={`list-entry title-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`}
+                    key={`title-permission-${JSON.stringify(permissions)}`}
+                  >
                     <div title={target.name}>
                       { target.name }
                     </div>

@@ -156,7 +156,7 @@ class Users extends React.Component {
         <div className="controls">
           <Action onClick={() => this.ActivateModal(false)}>Add Fabric User</Action>
           {
-            this.props.rootStore.oauthSettings.domain && this.props.rootStore.oauthUsers ?
+            this.props.rootStore.oauthUsers ?
               <Action onClick={() => this.ActivateModal(true)}>
                 Add OAuth User
               </Action> : null

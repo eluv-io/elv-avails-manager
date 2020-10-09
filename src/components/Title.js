@@ -124,12 +124,7 @@ class Title extends React.Component {
     let content;
     switch (this.state.tab) {
       case "permissions":
-        content = (
-          <TitlePermissions
-            key={JSON.stringify(this.props.rootStore.titlePermissions[this.Title().objectId] || {})}
-            objectId={this.Title().objectId}
-          />
-        );
+        content = <TitlePermissions objectId={this.Title().objectId} />;
         break;
       case "profiles":
         content = this.Profiles();
