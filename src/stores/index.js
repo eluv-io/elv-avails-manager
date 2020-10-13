@@ -545,7 +545,7 @@ class RootStore {
   @action.bound
   LoadGroups = flow(function * ({page=1, perPage=100, filter=""}) {
     const startIndex = (page - 1) * perPage;
-    const groupAddresses = (yield this.client.Collection({collectionType: "accessGroups"})).sort().slice(0, 10);
+    const groupAddresses = (yield this.client.Collection({collectionType: "accessGroups"})).sort();
 
     this.totalGroups = groupAddresses.length;
 
