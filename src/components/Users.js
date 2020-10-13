@@ -177,7 +177,7 @@ class Users extends React.Component {
                 <React.Fragment>
                   <div title={address}>{ name }</div>
                   <div title={type}>{ this.props.rootStore.FormatType(type) }</div>
-                  <div>{ this.props.rootStore.targetTitlesIds(address).length }</div>
+                  <div>{ this.props.rootStore.targetTitleIds(address).length }</div>
                 </React.Fragment>
               );
 

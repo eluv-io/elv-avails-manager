@@ -91,7 +91,7 @@ class RootStore {
   }
 
   targetTitleIds(address) {
-    return this.titlePermissionMap[address];
+    return this.titlePermissionMap[address] || [];
   }
 
   targetTitlePermissions(address) {
@@ -545,13 +545,13 @@ class RootStore {
   @action.bound
   LoadGroups = flow(function * ({page=1, perPage=100, filter=""}) {
     const startIndex = (page - 1) * perPage;
-    const groupAddresses = (yield this.client.Collection({collectionType: "accessGroups"})).sort();
+    const groupAddresses = (yield this.client.Collection({collectionType: "accessGroups"})).sort().slice(0, 10);
 
     this.totalGroups = groupAddresses.length;
 
     const groups = (
       yield this.client.utils.LimitedMap(
-        10,
+        20,
         groupAddresses,
         async address => {
           address = this.client.utils.FormatAddress(address);

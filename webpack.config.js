@@ -52,7 +52,7 @@ module.exports = {
       maxChunks: 1,
     }),
     new HtmlWebpackPlugin({
-      title: "Eluvio Fabric Browser App Template",
+      title: "Eluvio Permissions Manager",
       template: Path.join(__dirname, "src", "index.html"),
       inject: "body",
       cache: false,
