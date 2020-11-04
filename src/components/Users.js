@@ -195,7 +195,7 @@ class Users extends React.Component {
 
               return (
                 <Link
-                  to={UrlJoin("users", type, address)}
+                  to={UrlJoin("users", address)}
                   key={`users-${address}`}
                   className={`list-entry users-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
                 >
@@ -224,10 +224,10 @@ class Users extends React.Component {
     this.CloseModal();
 
     if(this.props.onSelect) {
-      this.props.onSelect(address, type);
+      this.props.onSelect(address, type, name);
     } else {
       this.setState({
-        modal: <Redirect to={UrlJoin(this.props.location.pathname, type, address)}/>
+        modal: <Redirect to={UrlJoin(this.props.location.pathname, address)}/>
       });
     }
   }

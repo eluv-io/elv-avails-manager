@@ -1,4 +1,4 @@
-import {configure, observable, action, computed, flow, runInAction} from "mobx";
+import {configure, observable, action, computed, flow, runInAction, toJS} from "mobx";
 import {DateTime} from "luxon";
 import URI from "urijs";
 import {Buffer} from "buffer";
@@ -15,6 +15,8 @@ configure({
 
 class RootStore {
   @observable appConfiguration;
+
+  @observable tenantId;
 
   @observable libraryId;
   @observable objectId;
@@ -39,6 +41,8 @@ class RootStore {
 
   // Things with permissions
   @observable allTitles = {};
+
+  @observable allNTPInstances = {};
 
   @observable allGroups = {};
   @observable allUsers = {};
@@ -124,6 +128,8 @@ class RootStore {
         return "Fabric Group";
       case "oauthGroup":
         return "OAuth Group";
+      case "ntpInstance":
+        return "NTP Instance";
       default:
         return "Unknown type";
     }
@@ -138,7 +144,6 @@ class RootStore {
   SetMessage(message) {
     this.message = { message, key: Math.random() };
   }
-
 
   SafeTraverse = (object, path) => {
     let keys = path.split("/");
@@ -157,6 +162,11 @@ class RootStore {
 
     return result;
   };
+
+  @action.bound
+  SetTenantId(tenantId) {
+    this.tenantId = tenantId;
+  }
 
   @action.bound
   AddSite = flow(function * ({libraryId, objectId}) {
@@ -213,23 +223,27 @@ class RootStore {
     };
   }
 
+  async DisplayTitle({objectId}) {
+    const metadata = (await this.client.ContentObjectMetadata({
+      libraryId: await this.client.ContentObjectLibraryId({objectId}),
+      objectId,
+      select: [
+        "public/name",
+        "public/asset_metadata/title",
+        "public/asset_metadata/display_title"
+      ]
+    })) || {};
+
+    const assetMetadata = (metadata.public || {}).asset_metadata || {};
+    return assetMetadata.display_title || assetMetadata.title || (metadata.public || {}).name;
+  }
+
   @action.bound
   AddTitle = flow(function * ({objectId, defaultProfiles=true, displayTitle, lookupDisplayTitle=false}) {
     if(this.allTitles[objectId]) { return; }
 
     if(!displayTitle && lookupDisplayTitle) {
-      const metadata = (yield this.client.ContentObjectMetadata({
-        libraryId: yield this.client.ContentObjectLibraryId({objectId}),
-        objectId,
-        select: [
-          "public/name",
-          "public/asset_metadata/title",
-          "public/asset_metadata/display_title"
-        ]
-      })) || {};
-
-      const assetMetadata = (metadata.public || {}).asset_metadata || {};
-      displayTitle = assetMetadata.display_title || assetMetadata.title || (metadata.public || {}).name;
+      displayTitle = yield this.DisplayTitle({objectId});
     }
 
     this.allTitles[objectId] = {
@@ -400,6 +414,8 @@ class RootStore {
 
   // Load information about a specific fabric group
   GroupInfo = flow(function * (address) {
+    address = address.trim();
+
     if(!this.groupCache[address]) {
       try {
         const metadata = yield this.client.ContentObjectMetadata({
@@ -469,7 +485,7 @@ class RootStore {
         return true;
       }
 
-      throw Error("No wallet");
+      throw Error("Invalid user address");
     } catch (error) {
       return false;
     }
@@ -479,6 +495,9 @@ class RootStore {
 
   @action.bound
   LoadUser(address, type, name) {
+    address = address.trim();
+    name = (name || "").trim();
+
     try {
       if(type === "fabricUser") {
         address = this.client.utils.FormatAddress(address);
@@ -508,6 +527,8 @@ class RootStore {
 
   @action.bound
   LoadGroup = flow(function * (address, type, name) {
+    address = address.trim();
+
     try {
       if(type === "fabricGroup") {
         this.allGroups[address] = yield this.GroupInfo(address);
@@ -522,10 +543,41 @@ class RootStore {
       this.allGroups[address] = {
         type,
         address,
-        name: name || address,
+        name: (name || address).trim(),
         description: ""
       };
     }
+  });
+
+  @action.bound
+  AddNTPInstance({ntpId, name}) {
+    ntpId = ntpId.trim();
+
+    this.allNTPInstances[ntpId] = {
+      name: name.trim(),
+      ntpId,
+      address: ntpId,
+      type: "ntpInstance"
+    };
+  }
+
+  @action.bound
+  CreateNTPInstance = flow(function * ({name, ticketLength, maxTickets, maxRedemptions, start, end, objectId, groupAddresses}) {
+    const ntpId = yield this.client.CreateNTPInstance({
+      tenantId: this.tenantId,
+      name,
+      objectId,
+      groupAddresses,
+      maxTickets,
+      maxRedemptions,
+      ticketLength,
+      start,
+      end
+    });
+
+    this.AddNTPInstance({ntpId, name});
+
+    return ntpId;
   });
 
   // Page/Sort/Filter users and groups
@@ -585,15 +637,16 @@ class RootStore {
     delete this.allUsers[address];
     delete this.allGroups[address];
     delete this.allOAuthGroups[address];
+    delete this.allNTPInstances[address];
 
     // Iterate through title permissions
     Object.keys(this.titlePermissions).forEach(objectId =>
-      this.RemoveTitlePermission({objectId, address})
+      this.RemoveTitlePermission(objectId, address)
     );
   }
 
   @action.bound
-  InitializeTitlePermission(address, objectId, type) {
+  InitializeTitlePermission(address, objectId, type, name) {
     if(!this.titlePermissions[objectId]) {
       this.titlePermissions[objectId] = {};
     }
@@ -606,6 +659,7 @@ class RootStore {
 
       this.titlePermissions[objectId][address] = {
         type,
+        name,
         profile: defaultProfile,
         startTime: undefined,
         endTime: undefined
@@ -879,6 +933,7 @@ class RootStore {
     }
 
     const settings = yield this.client.ContentObjectMetadata({...params, metadataSubtree: "auth_policy_settings"});
+
     if(settings) {
       this.sites = yield Promise.all(
         (settings.sites || []).map(async objectId => {
@@ -892,6 +947,9 @@ class RootStore {
           };
         })
       );
+
+      this.tenantId = settings.tenantId || "";
+      this.allNTPInstances = settings.ntp_instances || {};
     }
 
     const authSpec = yield this.client.ContentObjectMetadata({...params, metadataSubtree: "auth_policy_spec"});
@@ -1000,7 +1058,7 @@ class RootStore {
               } else if(type === "user") {
                 type = "fabricUser";
                 id = this.client.utils.HashToAddress(id);
-                const name = this.SafeTraverse(settings, `fabricUsers/${id}/name`);
+                const name = this.SafeTraverse(settings, `fabric_users/${id}/name`);
                 this.LoadUser(id, type, name);
               } else if(type === "oauth_user") {
                 type = "oauthUser";
@@ -1109,6 +1167,7 @@ class RootStore {
           } else if(type === "fabricUser") {
             itemPermission.subject = {
               id: `iusr${this.client.utils.AddressToHash(id)}`,
+              name: permission.name,
               type: "user"
             };
           } else if(type === "oauthUser") {
@@ -1147,8 +1206,10 @@ class RootStore {
         writeToken,
         metadataSubtree: "auth_policy_settings",
         metadata: {
+          tenantId: this.tenantId || "",
           sites: this.sites.map(site => site.objectId),
-          fabricUsers
+          fabric_users: fabricUsers,
+          ntp_instances: toJS(this.allNTPInstances || {})
         }
       });
 

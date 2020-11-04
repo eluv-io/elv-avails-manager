@@ -3,11 +3,15 @@ import {inject, observer} from "mobx-react";
 import PropTypes from "prop-types";
 
 import {DeleteButton, EffectiveAvailability, InitPSF} from "../Misc";
-import {Action, DateSelection, Modal} from "elv-components-js";
+import {Action, DateSelection, ImageIcon, Modal} from "elv-components-js";
 import {withRouter} from "react-router";
 
 import Groups from "../Groups";
 import Users from "../Users";
+import NTPInstances from "../NTPInstances";
+import UrlJoin from "url-join";
+import LinkIcon from "../../static/icons/link.svg";
+import {Link} from "react-router-dom";
 
 @inject("rootStore")
 @observer
@@ -36,8 +40,9 @@ class TitlePermissions extends React.Component {
     return (
       <React.Fragment>
         <div className="controls">
-          <Action onClick={() => this.ActivateModal(false)}>Add User Permission</Action>
-          <Action onClick={() => this.ActivateModal(true)}>Add Group Permission</Action>
+          <Action onClick={() => this.ActivateModal("user")}>Add User Permission</Action>
+          <Action onClick={() => this.ActivateModal("group")}>Add Group Permission</Action>
+          <Action onClick={() => this.ActivateModal("ntp")}>Add NTP Permission</Action>
           { this.Filter("Filter Permissions") }
         </div>
         { this.PageControls(titlePermissionAddresses.length) }
@@ -54,15 +59,31 @@ class TitlePermissions extends React.Component {
           {
             this.Paged(titlePermissionAddresses)
               .map((address, index) => {
-                const target = this.props.rootStore.allGroups[address] || this.props.rootStore.allUsers[address];
+                const target =
+                  this.props.rootStore.allGroups[address] ||
+                  this.props.rootStore.allUsers[address] ||
+                  this.props.rootStore.allNTPInstances[address];
+
+                if(!target) { return; }
+
                 const permissions = titlePermissions[address];
                 const Update = (key, value) => {
                   this.props.rootStore.SetTitlePermissionAccess(this.props.objectId, address, key, value);
                   this.setState({version: this.state.version + 1});
                 };
+
                 const profile = this.props.rootStore.titleProfiles[this.props.objectId][permissions.profile];
 
                 if(!profile) { return null; }
+
+                let linkPath;
+                if(target.type === "fabricGroup" || target.type === "oauthGroup") {
+                  linkPath = UrlJoin("/groups", target.address);
+                } else if(target.type === "fabricUser" || target.type === "oauthUser") {
+                  linkPath = UrlJoin("/users", target.address);
+                } else {
+                  linkPath = UrlJoin("/ntps", target.address);
+                }
 
                 return (
                   <div
@@ -70,6 +91,9 @@ class TitlePermissions extends React.Component {
                     key={`title-permission-${JSON.stringify(permissions)}`}
                   >
                     <div title={target.name}>
+                      <Link to={linkPath} className="title-link">
+                        <ImageIcon icon={LinkIcon} />
+                      </Link>
                       { target.name }
                     </div>
                     <div>
@@ -111,13 +135,25 @@ class TitlePermissions extends React.Component {
 
   /* Target Selection */
 
-  AddPermission(address, type) {
-    this.props.rootStore.InitializeTitlePermission(address, this.props.objectId, type);
+  AddPermission(address, type, name) {
+    this.props.rootStore.InitializeTitlePermission(address, this.props.objectId, type, name);
 
     this.CloseModal();
   }
 
-  ActivateModal(groups=false) {
+  ActivateModal(type) {
+    let selection;
+    switch (type) {
+      case "user":
+        selection = <Users selectable onSelect={this.AddPermission}/>;
+        break;
+      case "group":
+        selection = <Groups selectable onSelect={this.AddPermission}/>;
+        break;
+      case "ntp":
+        selection = <NTPInstances selectable onSelect={this.AddPermission}/>;
+    }
+
     this.setState({
       modal: (
         <Modal
@@ -125,11 +161,7 @@ class TitlePermissions extends React.Component {
           closable={true}
           OnClickOutside={this.CloseModal}
         >
-          {
-            groups ?
-              <Groups selectable onSelect={this.AddPermission} /> :
-              <Users selectable onSelect={this.AddPermission} />
-          }
+          { selection }
         </Modal>
       )
     });

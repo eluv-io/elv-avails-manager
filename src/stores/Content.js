@@ -49,6 +49,10 @@ class ContentStore {
         }
       });
 
+      if(!pagination) {
+        throw Error("Search not available");
+      }
+
       this.sitePaginationInfo = {
         items: pagination.total,
         limit: this.objectsPerPage

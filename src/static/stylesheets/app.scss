@@ -36,6 +36,10 @@ body,
 .message {
   animation: FadeOut 5s linear forwards;
   color: $elv-color-mediumblue;
+
+  &:not(:empty) {
+    margin: $elv-spacing-xs 0;
+  }
 }
 
 .error-message {
@@ -330,7 +334,8 @@ button {
 }
 
 .user-browser,
-.group-browser {
+.group-browser,
+.ntp-browser {
   padding-bottom: 1rem;
 
   h1 {
@@ -358,6 +363,16 @@ button {
 
 form {
   max-width: 500px;
+
+  &.ntp-instance-form {
+    margin-bottom: $elv-spacing-xl;
+    max-width: 700px;
+
+    &.ntp-instance-form {
+      min-width: 500px;
+      width: 100%;
+    }
+  }
 
   h1 {
     margin-bottom: $elv-spacing-l;
@@ -400,5 +415,15 @@ form {
 
   .message {
     height: 2rem;
+  }
+}
+
+.-elv-labelled-field {
+  &.align-top {
+    margin-top: $elv-spacing-m;
+
+    label {
+      align-items: flex-start;
+    }
   }
 }

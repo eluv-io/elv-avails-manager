@@ -106,7 +106,9 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
   }
 
   select {
+    @include elv-ellipsis;
     background-color: $elv-color-white;
+    max-width: 100%;
   }
 
   .-elv-date-input {
@@ -219,6 +221,22 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 
 .group-titles-list-entry {
   grid-template-columns: 1fr 3fr;
+}
+
+.ntp-instance-list-entry {
+  grid-template-columns: 1fr 1fr 1fr 6rem;
+
+  &.list-entry-selectable {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.ntp-groups-list-entry {
+  grid-template-columns: 1fr 6rem;
+}
+
+.ntp-object-list-entry {
+  grid-template-columns: 1fr;
 }
 
 .sites-list-entry {

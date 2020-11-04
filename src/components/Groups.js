@@ -80,7 +80,7 @@ class GroupBrowser extends React.Component {
                 <div
                   key={`groups-${group.address}`}
                   className={`list-entry list-entry-selectable groups-browse-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
-                  onClick={() => this.props.onComplete(group.address, group.type)}
+                  onClick={() => this.props.onComplete(group.address, group.type, group.name)}
                 >
                   <div>{ group.name }</div>
                   <div className="small-font">{ group.description }</div>
@@ -118,6 +118,7 @@ class Groups extends React.Component {
   render() {
     const groups = Object.values(this.props.rootStore.allGroups)
       .filter(({name, description}) => !this.state.activeFilter || ((name || "").toLowerCase().includes(this.state.activeFilter.toLowerCase()) || (description || "").toLowerCase().includes(this.state.activeFilter.toLowerCase())))
+      .filter(({type}) => this.props.fabricOnly ? type === "fabricGroup" : true)
       .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1));
 
     return (
@@ -130,7 +131,7 @@ class Groups extends React.Component {
         <div className="controls">
           <Action onClick={() => this.ActivateModal(false)}>Add Fabric Group</Action>
           {
-            this.props.rootStore.oauthGroups ?
+            this.props.rootStore.oauthGroups && !this.props.fabricOnly ?
               <Action onClick={() => this.ActivateModal(true)}>
                 Add OAuth Group
               </Action> : null
@@ -164,7 +165,7 @@ class Groups extends React.Component {
                   <div
                     key={`groups-${address}`}
                     className={`list-entry list-entry-selectable groups-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
-                    onClick={() => this.props.onSelect(address, type)}
+                    onClick={() => this.props.onSelect(address, type, name)}
                   >
                     { contents }
                   </div>
@@ -173,7 +174,7 @@ class Groups extends React.Component {
 
               return (
                 <Link
-                  to={UrlJoin("groups", type, address)}
+                  to={UrlJoin("groups", address)}
                   key={`groups-${address}`}
                   className={`list-entry groups-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
                 >
@@ -196,16 +197,16 @@ class Groups extends React.Component {
 
   /* Group Browser */
 
-  async AddGroup(address, type) {
-    await this.props.rootStore.LoadGroup(address, type);
+  async AddGroup(address, type, name) {
+    await this.props.rootStore.LoadGroup(address, type, name);
 
     this.CloseModal();
 
     if(this.props.onSelect) {
-      this.props.onSelect(address, type);
+      this.props.onSelect(address, type, name);
     } else {
       this.setState({
-        modal: <Redirect to={UrlJoin(this.props.location.pathname, type, address)}/>
+        modal: <Redirect to={UrlJoin(this.props.location.pathname, address)}/>
       });
     }
   }
@@ -235,6 +236,7 @@ class Groups extends React.Component {
 }
 
 Groups.propTypes = {
+  fabricOnly: PropTypes.bool,
   selectable: PropTypes.bool,
   onSelect: PropTypes.func
 };

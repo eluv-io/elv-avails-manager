@@ -20,6 +20,7 @@ import Action from "elv-components-js/src/components/Action";
 
 import timezones from "./TimeZones";
 import Settings from "./components/settings/Settings";
+import NTPInstances from "./components/NTPInstances";
 
 if(typeof EluvioConfiguration === "undefined") {
   global.EluvioConfiguration = {};
@@ -94,6 +95,7 @@ class App extends React.Component {
           <NavLink to="/titles" className="-elv-tab" activeClassName="selected">Titles</NavLink>
           <NavLink to="/users" className="-elv-tab" activeClassName="selected">Users</NavLink>
           <NavLink to="/groups" className="-elv-tab" activeClassName="selected">Groups</NavLink>
+          <NavLink to="/ntps" className="-elv-tab" activeClassName="selected">Tickets</NavLink>
           <NavLink to="/settings" className="-elv-tab" activeClassName="selected">Settings</NavLink>
         </nav>
         <main>
@@ -101,10 +103,13 @@ class App extends React.Component {
             <Route exact path="/settings" component={Settings} />
 
             <Route exact path="/users" component={Users} />
-            <Route exact path="/users/:userType/:userAddress" component={Titles} />
+            <Route exact path="/users/:userAddress" component={Titles} />
 
             <Route exact path="/groups" component={Groups} />
-            <Route exact path="/groups/:groupType/:groupAddress" component={Titles} />
+            <Route exact path="/groups/:groupAddress" component={Titles} />
+
+            <Route exact path="/ntps" component={NTPInstances} />
+            <Route exact path="/ntps/:ntpId" component={Titles} />
 
             <Route exact path="/titles" component={Titles} />
             <Route exact path="/titles/:objectId" component={Title} />

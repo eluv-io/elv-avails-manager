@@ -40,8 +40,14 @@ class Titles extends React.Component {
     return this.props.rootStore.allGroups[this.props.match.params.groupAddress];
   }
 
+  NTP() {
+    if(!this.props.match.params.ntpId) { return; }
+
+    return this.props.rootStore.allNTPInstances[this.props.match.params.ntpId];
+  }
+
   Target() {
-    return this.Group() || this.User();
+    return this.Group() || this.User() || this.NTP();
   }
 
   TargetPermissions() {
@@ -159,7 +165,7 @@ class Titles extends React.Component {
       <div className="page-container titles">
         { this.state.modal }
         <div className="page-header">
-          { this.Target() ? <BackButton to={Path.dirname(Path.dirname(this.props.location.pathname))} /> : null }
+          { this.Target() ? <BackButton to={Path.dirname(this.props.location.pathname)} /> : null }
           <h1>{ this.Target() ? `${this.Target().name} | Title Permissions` : "All Titles"}</h1>
         </div>
 
@@ -203,7 +209,7 @@ class Titles extends React.Component {
           await this.props.rootStore.AddTitle({libraryId, objectId: objectId, lookupDisplayTitle: true});
 
           if(this.Target()) {
-            this.props.rootStore.InitializeTitlePermission(this.Target().address, objectId, this.Target().type);
+            this.props.rootStore.InitializeTitlePermission(this.Target().address, objectId, this.Target().type, this.Target().name);
           }
         } catch (error) {
           if(!addError) { addError = error; }
@@ -211,7 +217,7 @@ class Titles extends React.Component {
           this.props.rootStore.RemoveTitle(objectId);
 
           if(this.Target()) {
-            this.props.rootStore.RemoveTitlePermission(this.Target().address, objectId, this.Target().type);
+            this.props.rootStore.RemoveTitlePermission(this.Target().address, objectId);
           }
 
           // eslint-disable-next-line no-console
