@@ -40,7 +40,7 @@ class NTPBrowser extends React.Component {
   CreateNTPInstanceForm() {
     return (
       <form
-        className="ntp-instance-form"
+        className="ntp-instance-form ntp-instance-create-form"
         onSubmit={async event => {
           event.preventDefault();
 

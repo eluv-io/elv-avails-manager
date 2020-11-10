@@ -365,12 +365,15 @@ form {
   max-width: 500px;
 
   &.ntp-instance-form {
-    margin-bottom: $elv-spacing-xl;
     max-width: 700px;
 
     &.ntp-instance-form {
       min-width: 500px;
       width: 100%;
+    }
+
+    &.ntp-instance-create-form {
+      margin-bottom: $elv-spacing-xl;
     }
   }
 

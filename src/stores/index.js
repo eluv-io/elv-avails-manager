@@ -1077,9 +1077,12 @@ class RootStore {
                 this.titlePermissions[titleId][id].endTime = DateTime.fromISO(loadedPermissions.end).toMillis();
               }
             } catch (error) {
-              this.SetError(`Failed to load permission on ${titleId} for ${loadedPermissions.subject.type.replace("_", " ")} ${loadedPermissions.subject.id}`);
+              const type = (((loadedPermissions || {}).subject || {}).type || "").replace("_", " ");
+              const id = ((loadedPermissions || {}).subject || {}).id || "";
+
+              this.SetError(`Failed to load permission on ${titleId} for ${type} ${id}`);
               // eslint-disable-next-line no-console
-              console.error(`Failed to load permission on ${titleId} for ${loadedPermissions.subject.type.replace("_", " ")} ${loadedPermissions.subject.id}`);
+              console.error(`Failed to load permission on ${titleId} for ${type} ${id}`);
               // eslint-disable-next-line no-console
               console.error(error);
             }
@@ -1175,6 +1178,11 @@ class RootStore {
               id: this.OAuthUserInfo(id).name,
               oauth_id: id,
               type: "oauth_user"
+            };
+          } else {
+            itemPermission.subject = {
+              id: id,
+              type: "otp"
             };
           }
 
