@@ -1,5 +1,5 @@
 import React from "react";
-import {Action, ImageIcon, PreviewIcon} from "elv-components-js";
+import {Action, ImageIcon, LabelledField, PreviewIcon} from "elv-components-js";
 import PropTypes from "prop-types";
 import UrlJoin from "url-join";
 import PictureIcon from "../static/icons/image.svg";
@@ -72,7 +72,7 @@ class AssetList extends React.Component {
           <div className="list-entry-icon-cell">
             { Icon(asset) }
           </div>
-          <div>{ asset.attachment_file_name }</div>
+          <div>{ asset.assetTitle }</div>
           <div>{ asset.asset_type }</div>
           <div>{ PrettyBytes(asset.attachment_file_size) }</div>
           { this.props.withPermissions ? <div>{asset.permission === "full-access" ? "Full Access" : "No Access"} </div> : null }
@@ -93,7 +93,7 @@ class AssetList extends React.Component {
         <div className="list-entry-icon-cell">
           { Icon(asset) }
         </div>
-        <div>{ asset.attachment_file_name }</div>
+        <div>{ asset.assetTitle }</div>
         <div>{ asset.asset_type }</div>
         <div>{ PrettyBytes(asset.attachment_file_size) }</div>
         { this.props.withPermissions ? <div>{asset.permission === "full-access" ? "Full Access" : "No Access"} </div> : null }
@@ -105,7 +105,12 @@ class AssetList extends React.Component {
 
   render() {
     const assets = this.props.assets
-      .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1));
+      .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
+      .filter(({attachment_file_name, asset_type}) =>
+        !this.state.filter ||
+        ((attachment_file_name || "").toLowerCase().includes(this.state.filter.toLowerCase())
+          || (asset_type || "").toLowerCase().includes(this.state.filter.toLowerCase()))
+      );
 
     const SelectAll = () => {
       this.setState({
@@ -127,25 +132,20 @@ class AssetList extends React.Component {
           { this.state.selected.length > 0 && this.props.selectable ? <Action className="secondary" onClick={Clear}>Clear Selected</Action> : null }
           <input className="filter" name="filter" value={this.state.filter} onChange={event => this.setState({filter: event.target.value})} placeholder="Filter Assets..."/>
         </div>
+        <div className="title-view">
+          <LabelledField label="Assets" value={assets.length} />
+        </div>
         <div className="list">
           <div className={`list-entry assets-list-entry list-header assets-list-header ${this.props.withPermissions ? "assets-list-entry-with-permissions" : ""}`}>
             <div className="list-entry-icon-cell"/>
-            { this.SortableHeader("attachment_file_name", "Asset") }
+            { this.SortableHeader("assetTitle", "Title") }
             { this.SortableHeader("asset_type", "Type") }
             { this.SortableHeader("attachment_file_size", "Size") }
             { this.props.withPermissions ? this.SortableHeader("permission", "Permission") : null }
             { this.props.withPermissions ? this.SortableHeader("startTime", "Start Time") : null }
             { this.props.withPermissions ? this.SortableHeader("endTime", "End Time") : null }
           </div>
-          {
-            assets
-              .filter(({attachment_file_name, asset_type}) =>
-                !this.state.filter ||
-                ((attachment_file_name || "").toLowerCase().includes(this.state.filter.toLowerCase())
-                  || (asset_type || "").toLowerCase().includes(this.state.filter.toLowerCase()))
-              )
-              .map(this.AssetEntry)
-          }
+          { assets.map(this.AssetEntry) }
         </div>
       </div>
     );

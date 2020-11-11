@@ -186,7 +186,7 @@ class AssetPermissions extends React.Component {
 
           <div className="page-header">
             <BackButton to={backPath} />
-            <h1>{ this.Title().displayTitle } | Asset Permissions | { this.props.match.params.profile }</h1>
+            <h1>{ this.Title().displayTitleWithStatus } | Asset Permissions | { this.props.match.params.profile }</h1>
           </div>
 
           <Selection

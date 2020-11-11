@@ -116,7 +116,8 @@ class ContentStore {
             "public/asset_metadata/title",
             "public/asset_metadata/display_title",
             "public/asset_metadata/asset_type",
-            "public/asset_metadata/title_type"
+            "public/asset_metadata/title_type",
+            "public/asset_metadata/info/status"
           ],
           sort: "public/asset_metadata/title",
           start,
@@ -144,12 +145,17 @@ class ContentStore {
           ...metadata.public.asset_metadata
         };
 
-        const name =
+        let name =
           metadata.public.asset_metadata.title ||
           metadata.public.asset_metadata.displayTitle ||
           metadata.public.name ||
           metadata.name ||
           "";
+
+        const status = (metadata.public.asset_metadata.info || {}).status;
+        if(status) {
+          name = `${name} (${status})`;
+        }
 
         objects.push({
           id,

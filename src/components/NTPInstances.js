@@ -33,8 +33,13 @@ class NTPBrowser extends React.Component {
       }
     });
 
+    this.SelectTargetObject = this.SelectTargetObject.bind(this);
     this.ActivateModal = this.ActivateModal.bind(this);
     this.CloseModal = this.CloseModal.bind(this);
+  }
+
+  componentDidMount() {
+    this.SelectTargetObject({objectId: this.props.rootStore.objectId});
   }
 
   CreateNTPInstanceForm() {
@@ -225,6 +230,13 @@ class NTPBrowser extends React.Component {
 
   /* NTP Instance Browser */
 
+  async SelectTargetObject({objectId}) {
+    const { displayTitleWithStatus } = await this.props.rootStore.DisplayTitle({objectId});
+
+    this.setState({objectId, objectDisplayTitle: displayTitleWithStatus});
+    this.CloseModal();
+  }
+
   ActivateModal(target="object") {
     this.setState({
       modal: (
@@ -238,12 +250,7 @@ class NTPBrowser extends React.Component {
               <ContentBrowser
                 header="Select an Object for this NTP Instance"
                 browseSite
-                onComplete={async ({objectId}) => {
-                  const objectDisplayTitle = await this.props.rootStore.DisplayTitle({objectId});
-
-                  this.setState({objectId, objectDisplayTitle});
-                  this.CloseModal();
-                }}
+                onComplete={this.SelectTargetObject}
                 onCancel={this.CloseModal}
               /> :
               <Groups

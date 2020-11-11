@@ -102,6 +102,7 @@ class RootStore {
     return this.targetTitleIds(address).map(id => ({
       objectId: id,
       displayTitle: this.allTitles[id].displayTitle,
+      displayTitleWithStatus: this.allTitles[id].displayTitleWithStatus,
       ...this.titlePermissions[id][address]
     }));
   }
@@ -230,25 +231,39 @@ class RootStore {
       select: [
         "public/name",
         "public/asset_metadata/title",
-        "public/asset_metadata/display_title"
+        "public/asset_metadata/display_title",
+        "public/asset_metadata/info/status"
       ]
     })) || {};
 
     const assetMetadata = (metadata.public || {}).asset_metadata || {};
-    return assetMetadata.display_title || assetMetadata.title || (metadata.public || {}).name;
+
+    const displayTitle = assetMetadata.display_title || assetMetadata.title || (metadata.public || {}).name;
+    let displayTitleWithStatus = displayTitle;
+
+    const status = (assetMetadata.info || {}).status;
+    if(status) {
+      displayTitleWithStatus = `${displayTitle} (${status})`;
+    }
+
+    return { displayTitle, displayTitleWithStatus };
   }
 
   @action.bound
   AddTitle = flow(function * ({objectId, defaultProfiles=true, displayTitle, lookupDisplayTitle=false}) {
     if(this.allTitles[objectId]) { return; }
 
+    let displayTitleWithStatus = displayTitle;
     if(!displayTitle && lookupDisplayTitle) {
-      displayTitle = yield this.DisplayTitle({objectId});
+      const titleInfo = yield this.DisplayTitle({objectId});
+      displayTitle = titleInfo.displayTitle;
+      displayTitleWithStatus = titleInfo.displayTitleWithStatus;
     }
 
     this.allTitles[objectId] = {
       objectId,
       displayTitle: displayTitle || objectId,
+      displayTitleWithStatus: displayTitleWithStatus || objectId,
       metadata: {public: {}}
     };
 
@@ -287,27 +302,29 @@ class RootStore {
       select: [
         "offerings",
         "assets",
-        "public/name",
-        "public/asset_metadata/title",
-        "public/asset_metadata/display_title",
         "public/asset_metadata/sources",
         "public/asset_metadata/ip_title_id",
         "public/asset_metadata/synopsis",
-        "public/asset_metadata/info/synopsis"
+        "public/asset_metadata/info/synopsis",
+        "public/asset_metadata/info/status"
       ]
     })) || {};
+
+    const { displayTitle, displayTitleWithStatus } = yield this.DisplayTitle({objectId});
 
     if(!metadata.public) { metadata.public = {}; }
     if(!metadata.public.asset_metadata) { metadata.public.asset_metadata = {}; }
 
-    this.allTitles[objectId].displayTitle =
-      metadata.public.asset_metadata.display_title ||
-      metadata.public.asset_metadata.title ||
-      metadata.public.name ||
-      objectId;
+    this.allTitles[objectId].displayTitle = displayTitle;
+    this.allTitles[objectId].displayTitleWithStatus = displayTitleWithStatus;
 
     if(metadata.assets) {
-      Object.keys(metadata.assets).forEach(key => metadata.assets[key].assetKey = key);
+      Object.keys(metadata.assets).forEach(key => {
+        metadata.assets[key].assetKey = key;
+        const access = metadata.assets[key].access || metadata.assets[key].original_access;
+        const status = access ? `(${access})` : "";
+        metadata.assets[key].assetTitle = `${metadata.assets[key].title} ${status}`;
+      });
       this.allTitles[objectId].assets = Object.values(metadata.assets);
     } else {
       this.allTitles[objectId].assets = [];
@@ -417,34 +434,37 @@ class RootStore {
     address = address.trim();
 
     if(!this.groupCache[address]) {
-      try {
-        const metadata = yield this.client.ContentObjectMetadata({
-          libraryId: (yield this.client.ContentSpaceId()).replace(/^ispc/, "ilib"),
-          objectId: this.client.utils.AddressToObjectId(address),
-          metadataSubtree: "public",
-          select: [
-            "name",
-            "description"
-          ]
-        });
+      // Store promise to avoid multiple redundant calls
+      this.groupCache[address] = new Promise(async resolve => {
+        try {
+          const metadata = await this.client.ContentObjectMetadata({
+            libraryId: (await this.client.ContentSpaceId()).replace(/^ispc/, "ilib"),
+            objectId: this.client.utils.AddressToObjectId(address),
+            metadataSubtree: "public",
+            select: [
+              "name",
+              "description"
+            ]
+          });
 
-        this.groupCache[address] = {
-          type: "fabricGroup",
-          address,
-          name: metadata.name || address,
-          description: metadata.description || ""
-        };
-      } catch (error) {
-        this.groupCache[address] = {
-          type: "fabricGroup",
-          address,
-          name: address,
-          description: ""
-        };
-      }
+          resolve({
+            type: "fabricGroup",
+            address,
+            name: metadata.name || address,
+            description: metadata.description || ""
+          });
+        } catch (error) {
+          resolve({
+            type: "fabricGroup",
+            address,
+            name: address,
+            description: ""
+          });
+        }
+      });
     }
 
-    return this.groupCache[address];
+    return yield this.groupCache[address];
   });
 
   // Retrieve OAuth user/group info

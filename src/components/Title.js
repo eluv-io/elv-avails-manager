@@ -84,7 +84,7 @@ class Title extends React.Component {
         <LabelledField label="Permissions" value={title.permission} />
         <LabelledField label="IP Title ID" value={assetMetadata.ip_title_id} />
         <LabelledField label="Title" value={assetMetadata.title} />
-        <LabelledField label="Display Title" value={assetMetadata.displayTitle} />
+        <LabelledField label="Display Title" value={assetMetadata.displayTitleWithStatus} />
         <LabelledField label="Synopsis" value={(assetMetadata.info || {}).synopsis || assetMetadata.synopsis} />
         { this.Preview() }
       </div>
@@ -149,13 +149,13 @@ class Title extends React.Component {
         { this.state.modal ? this.TitleProfileModal() : null }
         <div className="page-header">
           <BackButton to={Path.dirname(this.props.location.pathname)} />
-          <h1>{ group ? `${group.name} | ${this.Title().title} | Title Permissions` : this.Title().displayTitle }</h1>
+          <h1>{ group ? `${group.name} | ${this.Title().title} | Title Permissions` : this.Title().displayTitleWithStatus }</h1>
         </div>
 
         <Tabs
           selected={this.state.tab}
           onChange={tab => this.setState({tab, showPreview: false})}
-          options={[["Availability Profiles", "profiles"], ["Permissions", "permissions"], ["Title", "title"], ["Assets", "assets"], ["Offerings", "offerings"]]}
+          options={[["Availability Profiles", "profiles"], ["Title Permissions", "permissions"], ["Title", "title"], ["Assets", "assets"], ["Offerings", "offerings"]]}
         />
 
         { content }
