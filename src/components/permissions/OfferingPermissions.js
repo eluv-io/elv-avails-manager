@@ -204,7 +204,7 @@ class OfferingPermissions extends React.Component {
 
         <Selection
           className="offering-default-permission"
-          label="Default Offering Permission"
+          label="Default Profile Permissions"
           value={this.PermissionInfo().offeringsDefault}
           options={[["No Access", "no-access"], ["Full Access", "full-access"]]}
           onChange={value => this.Update("offeringsDefault", value)}

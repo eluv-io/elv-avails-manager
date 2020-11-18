@@ -344,6 +344,21 @@ button {
   }
 }
 
+.profile-settings-icon {
+  &.-elv-icon {
+    stroke: $elv-color-darkergray;
+  }
+}
+
+.default-permission-indicator {
+  &.-elv-icon {
+    margin: 0 $elv-spacing-xxs;
+    min-height: 1.1rem;
+    min-width: 1.1rem;
+    stroke: $elv-color-text-light;
+  }
+}
+
 .-elv-loading-element {
   &:not(.no-margin) {
     margin: 5rem 0;

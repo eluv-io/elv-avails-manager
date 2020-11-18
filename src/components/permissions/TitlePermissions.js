@@ -3,7 +3,7 @@ import {inject, observer} from "mobx-react";
 import PropTypes from "prop-types";
 
 import {DeleteButton, EffectiveAvailability, InitPSF} from "../Misc";
-import {Action, DateSelection, ImageIcon, Modal} from "elv-components-js";
+import {Action, DateSelection, ImageIcon, Modal, ToolTip} from "elv-components-js";
 import {withRouter} from "react-router";
 
 import Groups from "../Groups";
@@ -91,9 +91,11 @@ class TitlePermissions extends React.Component {
                     key={`title-permission-${JSON.stringify(permissions)}`}
                   >
                     <div title={target.name}>
-                      <Link to={linkPath} className="title-link">
-                        <ImageIcon icon={LinkIcon} />
-                      </Link>
+                      <ToolTip content={`Go to ${target.name}`}>
+                        <Link to={linkPath} className="title-link">
+                          <ImageIcon icon={LinkIcon} />
+                        </Link>
+                      </ToolTip>
                       { target.name }
                     </div>
                     <div>

@@ -1,13 +1,15 @@
 import React from "react";
 import {inject, observer} from "mobx-react";
-import {DateSelection, ImageIcon} from "elv-components-js";
+import {DateSelection, ImageIcon, ToolTip} from "elv-components-js";
 import PropTypes from "prop-types";
 import {withRouter} from "react-router";
 import UrlJoin from "url-join";
 import {Link} from "react-router-dom";
+import {DeleteButton} from "../Misc";
 
 import SettingsIcon from "../../static/icons/settings.svg";
-import {DeleteButton} from "../Misc";
+import CheckIcon from "../../static/icons/check-circle.svg";
+import MinusCircleIcon from "../../static/icons/minus-circle.svg";
 
 @inject("rootStore")
 @observer
@@ -47,7 +49,7 @@ class TitleProfile extends React.Component {
     options.push(<option key="full-access" value="full-access">Full Access</option>);
 
     const value = this.PermissionInfo()[key];
-    let settingsIcon;
+    let settingsIcon, defaultPermissionIcon;
     if(value === "custom") {
       let link = UrlJoin(
         this.props.location.pathname,
@@ -57,10 +59,24 @@ class TitleProfile extends React.Component {
         key
       );
 
+      const type = key.charAt(0).toUpperCase() + key.substr(1).toLowerCase();
       settingsIcon = (
-        <Link to={link} title="Configure Permissions">
-          <ImageIcon icon={SettingsIcon} />
-        </Link>
+        <ToolTip content={`Configure Permissions For ${type}`}>
+          <Link to={link}>
+            <ImageIcon className="profile-settings-icon" icon={SettingsIcon} />
+          </Link>
+        </ToolTip>
+      );
+
+      const defaultPermission = this.PermissionInfo()[`${key}Default`];
+
+      defaultPermissionIcon = (
+        <ToolTip content={`Default Profile Permission For ${type}: ${defaultPermission === "full-access" ? "Full Access" : "No Access"}`}>
+          <ImageIcon
+            className={`default-permission-indicator ${defaultPermission === "full-access" ? "full-access" : ""}`}
+            icon={defaultPermission === "full-access" ? CheckIcon : MinusCircleIcon}
+          />
+        </ToolTip>
       );
     }
 
@@ -72,6 +88,7 @@ class TitleProfile extends React.Component {
         >
           { options }
         </select>
+        { defaultPermissionIcon }
         { settingsIcon }
       </React.Fragment>
     );

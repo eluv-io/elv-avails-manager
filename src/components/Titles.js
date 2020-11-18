@@ -1,5 +1,5 @@
 import React from "react";
-import {Action, DateSelection, ImageIcon, Modal} from "elv-components-js";
+import {Action, DateSelection, ImageIcon, Modal, ToolTip} from "elv-components-js";
 import ContentBrowser from "./ContentBrowser";
 import {inject, observer} from "mobx-react";
 import UrlJoin from "url-join";
@@ -78,9 +78,11 @@ class Titles extends React.Component {
                 return (
                   <div className={`list-entry target-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${this.Target().address}-${titlePermission.objectId}`}>
                     <div className="small-font" title={titlePermission.displayTitle}>
-                      <Link to={UrlJoin("/titles", titlePermission.objectId)} className="title-link">
-                        <ImageIcon icon={LinkIcon} />
-                      </Link>
+                      <ToolTip content={`Go to ${titlePermission.displayTitle}`}>
+                        <Link to={UrlJoin("/titles", titlePermission.objectId)} className="title-link">
+                          <ImageIcon icon={LinkIcon} />
+                        </Link>
+                      </ToolTip>
                       { titlePermission.displayTitle }
                     </div>
                     <div>

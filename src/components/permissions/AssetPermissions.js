@@ -191,7 +191,7 @@ class AssetPermissions extends React.Component {
 
           <Selection
             className="asset-default-permission"
-            label="Default Asset Permission"
+            label="Default Profile Permissions"
             value={this.PermissionInfo().assetsDefault}
             options={[["No Access", "no-access"], ["Full Access", "full-access"]]}
             onChange={value => this.Update("assetsDefault", value)}
