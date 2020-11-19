@@ -111,7 +111,7 @@ class App extends React.Component {
             <Route exact path="/ntps" component={NTPInstances} />
             <Route exact path="/ntps/:ntpId" component={Titles} />
 
-            <Route exact path="/titles" component={Titles} />
+            <Route exact path="/titles" component={params => <Titles key="main-titles" {...params} />} />
             <Route exact path="/titles/:objectId" component={Title} />
             <Route exact path="/titles/:objectId/permissions/profiles/:profile/assets" component={AssetPermissions} />
             <Route exact path="/titles/:objectId/permissions/profiles/:profile/offerings" component={OfferingPermissions} />

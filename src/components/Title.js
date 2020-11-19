@@ -84,7 +84,8 @@ class Title extends React.Component {
         <LabelledField label="Permissions" value={title.permission} />
         <LabelledField label="IP Title ID" value={assetMetadata.ip_title_id} />
         <LabelledField label="Title" value={assetMetadata.title} />
-        <LabelledField label="Display Title" value={assetMetadata.displayTitleWithStatus} />
+        <LabelledField label="Display Title" value={assetMetadata.display_title} />
+        <LabelledField label="Status" value={title.status} />
         <LabelledField label="Synopsis" value={(assetMetadata.info || {}).synopsis || assetMetadata.synopsis} />
         { this.Preview() }
       </div>

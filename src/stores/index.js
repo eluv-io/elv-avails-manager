@@ -1,4 +1,4 @@
-import {configure, observable, action, computed, flow, runInAction, toJS} from "mobx";
+import {configure, observable, action, computed, flow, runInAction} from "mobx";
 import {DateTime} from "luxon";
 import URI from "urijs";
 import {Buffer} from "buffer";
@@ -246,7 +246,7 @@ class RootStore {
       displayTitleWithStatus = `${displayTitle} (${status})`;
     }
 
-    return { displayTitle, displayTitleWithStatus };
+    return { displayTitle, displayTitleWithStatus, status };
   }
 
   @action.bound
@@ -254,16 +254,19 @@ class RootStore {
     if(this.allTitles[objectId]) { return; }
 
     let displayTitleWithStatus = displayTitle;
+    let status;
     if(!displayTitle && lookupDisplayTitle) {
       const titleInfo = yield this.DisplayTitle({objectId});
       displayTitle = titleInfo.displayTitle;
       displayTitleWithStatus = titleInfo.displayTitleWithStatus;
+      status = titleInfo.status;
     }
 
     this.allTitles[objectId] = {
       objectId,
       displayTitle: displayTitle || objectId,
       displayTitleWithStatus: displayTitleWithStatus || objectId,
+      status,
       metadata: {public: {}}
     };
 
@@ -288,6 +291,7 @@ class RootStore {
     let currentTitle = this.allTitles[objectId];
 
     const libraryId = yield this.client.ContentObjectLibraryId({objectId});
+    this.allTitles[objectId].libraryId = libraryId;
 
     if(!currentTitle) {
       currentTitle = this.AddTitle({objectId, defaultProfiles});
@@ -302,6 +306,8 @@ class RootStore {
       select: [
         "offerings",
         "assets",
+        "public/asset_metadata/display_title",
+        "public/asset_metadata/title",
         "public/asset_metadata/sources",
         "public/asset_metadata/ip_title_id",
         "public/asset_metadata/synopsis",
@@ -310,13 +316,14 @@ class RootStore {
       ]
     })) || {};
 
-    const { displayTitle, displayTitleWithStatus } = yield this.DisplayTitle({objectId});
+    const { displayTitle, displayTitleWithStatus, status } = yield this.DisplayTitle({objectId});
 
     if(!metadata.public) { metadata.public = {}; }
     if(!metadata.public.asset_metadata) { metadata.public.asset_metadata = {}; }
 
     this.allTitles[objectId].displayTitle = displayTitle;
     this.allTitles[objectId].displayTitleWithStatus = displayTitleWithStatus;
+    this.allTitles[objectId].status = status;
 
     if(metadata.assets) {
       Object.keys(metadata.assets).forEach(key => {
@@ -532,7 +539,7 @@ class RootStore {
       }
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error("Failed to load group:");
+      console.error("Failed to load user:", address);
       // eslint-disable-next-line no-console
       console.error(error);
 
@@ -557,7 +564,7 @@ class RootStore {
       }
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error("Failed to load group:");
+      console.error("Failed to load group:", address);
       // eslint-disable-next-line no-console
       console.error(error);
       this.allGroups[address] = {
@@ -570,16 +577,27 @@ class RootStore {
   });
 
   @action.bound
-  AddNTPInstance({ntpId, name}) {
-    ntpId = ntpId.trim();
+  LoadNTPInstance = flow(function * ({ntpId, name}) {
+    try {
+      ntpId = ntpId.trim();
+      name = (name || "").trim();
 
-    this.allNTPInstances[ntpId] = {
-      name: name.trim(),
-      ntpId,
-      address: ntpId,
-      type: "ntpInstance"
-    };
-  }
+      const ntpInfo = yield this.client.NTPInstance({tenantId: this.tenantId, ntpId});
+
+      this.allNTPInstances[ntpId] = {
+        ...ntpInfo,
+        name: name.trim(),
+        ntpId,
+        address: ntpId,
+        type: "ntpInstance"
+      };
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load NTP Instance:", ntpId);
+      // eslint-disable-next-line no-console
+      console.error(error);
+    }
+  });
 
   @action.bound
   CreateNTPInstance = flow(function * ({name, ticketLength, maxTickets, maxRedemptions, start, end, objectId, groupAddresses}) {
@@ -591,13 +609,35 @@ class RootStore {
       maxTickets,
       maxRedemptions,
       ticketLength,
-      start,
-      end
+      startTime: start,
+      endTime: end
     });
 
-    this.AddNTPInstance({ntpId, name});
+    yield this.LoadNTPInstance({ntpId, name});
 
     return ntpId;
+  });
+
+  @action.bound
+  EditNTPInstance = flow(function * ({ntpId, name, maxTickets, maxRedemptions, start, end}) {
+    yield this.client.UpdateNTPInstance({
+      tenantId: this.tenantId,
+      ntpId,
+      maxTickets,
+      maxRedemptions,
+      startTime: start,
+      endTime: end
+    });
+
+    yield this.LoadNTPInstance({ntpId, name});
+  });
+
+  @action.bound
+  DeleteNTPInstance = flow(function * ({ntpId}) {
+    yield this.client.DeleteNTPInstance({
+      tenantId: this.tenantId,
+      ntpId,
+    });
   });
 
   // Page/Sort/Filter users and groups
@@ -969,7 +1009,11 @@ class RootStore {
       );
 
       this.tenantId = settings.tenantId || "";
-      this.allNTPInstances = settings.ntp_instances || {};
+      yield Promise.all(
+        Object.keys(settings.ntp_instances || {}).map(async ntpId => {
+          await this.LoadNTPInstance({ntpId, name: settings.ntp_instances[ntpId].name});
+        })
+      );
     }
 
     const authSpec = yield this.client.ContentObjectMetadata({...params, metadataSubtree: "auth_policy_spec"});
@@ -1083,6 +1127,8 @@ class RootStore {
               } else if(type === "oauth_user") {
                 type = "oauthUser";
                 this.LoadUser(id, type, loadedPermissions.subject.id);
+              } else if(type === "ntp") {
+                await this.LoadNTPInstance(id);
               }
 
               this.titlePermissions[titleId][id] = {
@@ -1228,6 +1274,9 @@ class RootStore {
         .filter(user => user.type === "fabricUser")
         .forEach(fabricUser => fabricUsers[fabricUser.address] = {name: fabricUser.name, address: fabricUser.address});
 
+      let ntpInstances = {};
+      Object.keys(this.allNTPInstances || {}).forEach(ntpId => ntpInstances[ntpId] = {name: this.allNTPInstances[ntpId].name});
+
       yield this.client.ReplaceMetadata({
         libraryId: this.libraryId,
         objectId: this.objectId,
@@ -1237,7 +1286,7 @@ class RootStore {
           tenantId: this.tenantId || "",
           sites: this.sites.map(site => site.objectId),
           fabric_users: fabricUsers,
-          ntp_instances: toJS(this.allNTPInstances || {})
+          ntp_instances: ntpInstances
         }
       });
 

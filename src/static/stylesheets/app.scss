@@ -379,6 +379,26 @@ button {
 form {
   max-width: 500px;
 
+  .error-message {
+    animation: none;
+    background-color: $elv-color-mediumred;
+    color: $elv-color-text-white;
+    margin: 0;
+    padding: $elv-spacing-xs;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  legend {
+    margin-bottom: $elv-spacing-s;
+  }
+
+  .-elv-date-input {
+    margin-bottom: 0;
+  }
+
   &.ntp-instance-form {
     max-width: 700px;
 

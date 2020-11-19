@@ -48,10 +48,12 @@ const DATE_FORMAT = {
   timeZoneName: "short"
 };
 
-export const FormatDate = millis => {
+export const FormatDate = (millis, long=false) => {
   if(!millis || !isFinite(millis)) { return ""; }
 
-  return DateTime.fromMillis(millis).toLocaleString(DATE_FORMAT);
+  return long ?
+    DateTime.fromMillis(millis).toLocaleString({...DATE_FORMAT, second: "numeric"}) :
+    DateTime.fromMillis(millis).toLocaleString(DATE_FORMAT);
 };
 
 export const EffectiveAvailability = (startTimes, endTimes) => {
