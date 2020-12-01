@@ -1,29 +1,31 @@
 import React from "react";
-import {Action, Confirm, DateSelection, ImageIcon, LabelledField, Maybe, Modal, Tabs, ToolTip} from "elv-components-js";
+import {
+  Action,
+  DateSelection,
+  ImageIcon,
+  Maybe,
+  Modal,
+  ToolTip
+} from "elv-components-js";
 import ContentBrowser from "./ContentBrowser";
 import {inject, observer} from "mobx-react";
 import UrlJoin from "url-join";
 import {Link, Redirect} from "react-router-dom";
 import {
   BackButton,
-  DeleteButton, EffectiveAvailability, FormatDate,
-  InitPSF
+  DeleteButton,
+  EffectiveAvailability,
+  InitPSF, NTPBadge
 } from "./Misc";
 import Path from "path";
 import AsyncComponent from "./AsyncComponent";
 import LinkIcon from "../static/icons/link.svg";
-import NTPForm from "./NTPForm";
 
 @inject("rootStore")
 @observer
 class Titles extends React.Component {
   constructor(props) {
     super(props);
-
-    let initialState = {
-      tabs: this.NTP() ? [["Titles", "titles"], ["NTP Instance Details", "details"]] : [["Titles", "titles"]],
-      tab: "titles"
-    };
 
     this.Content = this.Content.bind(this);
     this.AddTitles = this.AddTitles.bind(this);
@@ -33,8 +35,7 @@ class Titles extends React.Component {
     this.InitPSF = InitPSF.bind(this);
     this.InitPSF({
       sortKey: "displayTitle",
-      perPage: this.Target() ? 10 : 100,
-      additionalState: initialState
+      perPage: this.Target() ? 10 : 100
     });
   }
 
@@ -58,25 +59,6 @@ class Titles extends React.Component {
 
   Target() {
     return this.Group() || this.User() || this.NTP();
-  }
-
-  NTPDetails() {
-    const ntp = this.NTP();
-
-    return (
-      <div className="title-view">
-        <LabelledField label="Name" value={ntp.name} />
-        <LabelledField label="NTP ID" value={ntp.ntpId} />
-        <LabelledField label="Object ID" value={ntp.objectId} />
-        <LabelledField label="Last Updated" value={FormatDate(ntp.updatedAt, true)} />
-        <LabelledField label="Start Time" value={FormatDate(ntp.startTime, true)} />
-        <LabelledField label="End Time" value={FormatDate(ntp.endTime, true)} />
-        <LabelledField label="Maximum Tickets" value={ntp.maxTickets} />
-        <LabelledField label="Tickets Issued" value={ntp.issuedTickets} />
-        <LabelledField label="Maximum Redemptions Per Ticket" value={ntp.maxRedemptions} />
-        <LabelledField label="Ticket Character Length" value={ntp.ticketLength} />
-      </div>
-    );
   }
 
   TargetPermissions() {
@@ -197,7 +179,7 @@ class Titles extends React.Component {
         { this.state.modal }
         <div className="page-header">
           { this.Target() ? <BackButton to={Path.dirname(this.props.location.pathname)} /> : null }
-          <h1>{ this.Target() ? `${this.Target().name} | Title Permissions` : "All Titles"}</h1>
+          <h1>{ this.Target() ? `${this.Target().name} | Title Permissions` : "All Titles"} {this.NTP() ? NTPBadge(this.NTP()): null}</h1>
         </div>
 
         <div className="controls">
@@ -205,47 +187,13 @@ class Titles extends React.Component {
           {
             Maybe(
               this.NTP(),
-              <Action onClick={() => this.ActivateModal(true)} className="secondary">Update NTP Instance</Action>
-            )
-          }
-          {
-            Maybe(
-              this.NTP(),
-              <Action
-                onClick={
-                  () => Confirm({
-                    message: "Are you sure you want to permanently delete this NTP instance? This action cannot be undone.",
-                    onConfirm: async () => {
-                      await this.props.rootStore.DeleteNTPInstance({ntpId: this.props.match.params.ntpId});
-                      this.props.rootStore.RemoveTarget(this.props.match.params.ntpId);
-                      this.setState({deleted: true});
-                    }
-                  })
-                }
-                className="danger"
-              >
-                Delete NTP Instance
-              </Action>
+              <Action className="secondary" type="link" to={UrlJoin(this.props.location.pathname, "manage")}>Manage NTP Instance</Action>
             )
           }
           { this.Filter("Filter Titles...") }
         </div>
 
-        {
-          Maybe(
-            this.state.tabs.length > 1,
-            <Tabs
-              selected={this.state.tab}
-              onChange={tab => this.setState({tab})}
-              options={this.state.tabs}
-            />
-          )
-        }
-
-        { this.state.tab === "titles" ?
-          (this.Target() ? this.TargetPermissions() : this.TitleList()) :
-          this.NTPDetails()
-        }
+        { (this.Target() ? this.TargetPermissions() : this.TitleList()) }
       </div>
     );
   }
@@ -307,25 +255,9 @@ class Titles extends React.Component {
     this.CloseModal();
   }
 
-  ActivateModal(ntpModal) {
-    let modal;
-    if(ntpModal){
-      modal = (
-        <Modal
-          className="asset-form-modal"
-          closable={true}
-          OnClickOutside={this.CloseModal}
-        >
-          <NTPForm
-            edit
-            ntpId={this.props.match.params.ntpId}
-            onComplete={this.CloseModal}
-            onCancel={this.CloseModal}
-          />
-        </Modal>
-      );
-    } else {
-      modal = (
+  ActivateModal() {
+    this.setState({
+      modal:(
         <Modal
           className="asset-form-modal"
           closable={true}
@@ -340,10 +272,8 @@ class Titles extends React.Component {
             objectOnly
           />
         </Modal>
-      );
-    }
-
-    this.setState({modal});
+      )
+    });
   }
 
   CloseModal() {

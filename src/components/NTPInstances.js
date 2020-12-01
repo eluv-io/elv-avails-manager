@@ -5,9 +5,9 @@ import {Redirect} from "react-router";
 import {Link} from "react-router-dom";
 import PropTypes from "prop-types";
 import {Action, Modal} from "elv-components-js";
-import {DeleteButton, InitPSF} from "./Misc";
+import {DeleteButton, FormatDate, InitPSF, NTPBadge} from "./Misc";
 
-import NTPForm from "./NTPForm";
+import NTPForms from "./NTPForms";
 
 
 @inject("rootStore")
@@ -45,20 +45,25 @@ class NTPInstances extends React.Component {
           { this.props.rootStore.tenantId ? <Action onClick={() => this.ActivateModal(true)}>Create NTP Instance</Action> : null }
           { this.Filter("Filter NTP Instances...") }
         </div>
-        { this.PageControls(ntpInstances.length) }
+        { this.PageControls(Object.values(this.props.rootStore.allNTPInstances).length) }
         <div className="list">
           <div className={`list-entry list-header ntp-instance-list-entry ${this.props.selectable ? "list-entry-selectable" : ""}`}>
             { this.SortableHeader("name", "Name") }
             { this.SortableHeader("id", "ID") }
+            { this.SortableHeader("startTime", "Start Time") }
+            { this.SortableHeader("endTime", "End Time") }
             <div>Titles</div>
             { this.props.selectable ? null : <div /> }
           </div>
           {
-            this.Paged(ntpInstances).map(({ntpId, name}, i) => {
+            this.Paged(ntpInstances).map(({ntpId, name, startTime, endTime}, i) => {
+              const dateFormat = {year: "numeric", month: "numeric", day: "numeric"};
               const contents = (
                 <React.Fragment>
-                  <div title={name}>{ name }</div>
+                  <div title={name}>{ name } { NTPBadge({startTime, endTime}) }</div>
                   <div title={ntpId}>{ ntpId }</div>
+                  <div title={FormatDate(startTime)}>{ FormatDate(startTime, false, dateFormat) }</div>
+                  <div title={FormatDate(endTime)}>{ FormatDate(endTime, false, dateFormat) }</div>
                   <div>{ this.props.rootStore.targetTitleIds(ntpId).length }</div>
                 </React.Fragment>
               );
@@ -122,7 +127,7 @@ class NTPInstances extends React.Component {
           OnClickOutside={this.CloseModal}
           className={`asset-form-modal ${create ? "fullscreen-modal" : "shrink-modal"}`}
         >
-          <NTPForm
+          <NTPForms
             create={create}
             onComplete={this.AddNTPInstance}
             onCancel={this.CloseModal}

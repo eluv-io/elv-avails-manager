@@ -1,4 +1,4 @@
-import {configure, observable, action, computed, flow, runInAction} from "mobx";
+import {configure, observable, action, computed, flow, runInAction, toJS} from "mobx";
 import {DateTime} from "luxon";
 import URI from "urijs";
 import {Buffer} from "buffer";
@@ -250,12 +250,12 @@ class RootStore {
   }
 
   @action.bound
-  AddTitle = flow(function * ({objectId, defaultProfiles=true, displayTitle, lookupDisplayTitle=false}) {
+  AddTitle = flow(function * ({objectId, defaultProfiles=true, displayTitle}) {
     if(this.allTitles[objectId]) { return; }
 
     let displayTitleWithStatus = displayTitle;
     let status;
-    if(!displayTitle && lookupDisplayTitle) {
+    if(!displayTitle) {
       const titleInfo = yield this.DisplayTitle({objectId});
       displayTitle = titleInfo.displayTitle;
       displayTitleWithStatus = titleInfo.displayTitleWithStatus;
@@ -577,19 +577,20 @@ class RootStore {
   });
 
   @action.bound
-  LoadNTPInstance = flow(function * ({ntpId, name}) {
+  LoadNTPInstance = flow(function * ({ntpId, name, tickets}) {
     try {
       ntpId = ntpId.trim();
-      name = (name || "").trim();
+      name = (name || (this.allNTPInstances[ntpId] || {}).name || "").trim();
 
       const ntpInfo = yield this.client.NTPInstance({tenantId: this.tenantId, ntpId});
 
       this.allNTPInstances[ntpId] = {
         ...ntpInfo,
+        tickets: tickets || (this.allNTPInstances[ntpId] || {}).tickets || [],
         name: name.trim(),
         ntpId,
         address: ntpId,
-        type: "ntpInstance"
+        type: "ntpInstance",
       };
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -615,6 +616,8 @@ class RootStore {
 
     yield this.LoadNTPInstance({ntpId, name});
 
+    yield this.SaveNTPInstances();
+
     return ntpId;
   });
 
@@ -630,6 +633,8 @@ class RootStore {
     });
 
     yield this.LoadNTPInstance({ntpId, name});
+
+    yield this.SaveNTPInstances();
   });
 
   @action.bound
@@ -638,7 +643,100 @@ class RootStore {
       tenantId: this.tenantId,
       ntpId,
     });
+
+    yield this.SaveNTPInstances();
   });
+
+  @action.bound
+  IssueTickets = flow(function * ({ntpId, useEmails=false, count=1, emails="", callback}) {
+    if(useEmails) {
+      // Remove leading and trailing whitespace and commas and split to list
+      emails = emails.trim().replace(/^,/, "").replace(/,$/, "").trim().split(",").map(email => email.trim());
+
+      for(let i = 0; i < emails.length; i++) {
+        if(!(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emails[i]))) {
+          throw Error(`Invalid email: ${emails[i]}`);
+        }
+      }
+    }
+
+    const list = useEmails ? emails : [...Array(parseInt(count)).keys()];
+
+    let tickets = [];
+    let failures = [];
+    let completed = 0;
+    yield this.client.utils.LimitedMap(
+      10,
+      list,
+      async (email) => {
+        try {
+          const {token, user_id} = await this.client.IssueNTPCode({
+            tenantId: this.tenantId,
+            ntpId,
+            email: useEmails ? email : undefined
+          });
+
+          tickets.push({
+            token,
+            user_id,
+            issued_at: Date.now()
+          });
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error(error);
+
+          failures.push({
+            email,
+            error
+          });
+        } finally {
+          completed += 1;
+          callback({completed, total: list.length});
+        }
+      }
+    );
+
+    this.allNTPInstances[ntpId].tickets = [
+      ...(this.allNTPInstances[ntpId].tickets || []),
+      ...tickets
+    ];
+
+    if(tickets.length > 0) {
+      yield this.SaveNTPInstances();
+    }
+
+    yield this.LoadNTPInstance({ntpId});
+
+    return {tickets, failures};
+  });
+
+  async SaveNTPInstances(infoOnly=false) {
+    let ntpInstances = {};
+    Object.keys(this.allNTPInstances || {})
+      .forEach(ntpId => ntpInstances[ntpId] = {
+        name: this.allNTPInstances[ntpId].name,
+        tickets: toJS(this.allNTPInstances[ntpId].tickets || [])
+      });
+
+    if(infoOnly) {
+      return ntpInstances;
+    }
+
+    await this.client.EditAndFinalizeContentObject({
+      libraryId: this.libraryId,
+      objectId: this.objectId,
+      commitMessage: "Save NTP Information (Permissions Manager)",
+      callback: async ({writeToken}) => {
+        await this.client.ReplaceMetadata({
+          libraryId: this.libraryId,
+          objectId: this.objectId,
+          writeToken,
+          metadataSubtree: "auth_policy_settings/ntp_instances",
+          metadata: ntpInstances
+        });
+      }
+    });
+  }
 
   // Page/Sort/Filter users and groups
 
@@ -1011,7 +1109,10 @@ class RootStore {
       this.tenantId = settings.tenantId || "";
       yield Promise.all(
         Object.keys(settings.ntp_instances || {}).map(async ntpId => {
-          await this.LoadNTPInstance({ntpId, name: settings.ntp_instances[ntpId].name});
+          await this.LoadNTPInstance({
+            ntpId,
+            ...settings.ntp_instances[ntpId]
+          });
         })
       );
     }
@@ -1024,7 +1125,7 @@ class RootStore {
       20,
       Object.keys(authSpec),
       async titleId => {
-        this.AddTitle({objectId: titleId, defaultProfiles: false, displayTitle: authSpec[titleId].display_title});
+        await this.AddTitle({objectId: titleId, defaultProfiles: false, displayTitle: authSpec[titleId].display_title});
 
         runInAction(() => {
           const profiles = Object.keys(authSpec[titleId].profiles || {});
@@ -1274,9 +1375,6 @@ class RootStore {
         .filter(user => user.type === "fabricUser")
         .forEach(fabricUser => fabricUsers[fabricUser.address] = {name: fabricUser.name, address: fabricUser.address});
 
-      let ntpInstances = {};
-      Object.keys(this.allNTPInstances || {}).forEach(ntpId => ntpInstances[ntpId] = {name: this.allNTPInstances[ntpId].name});
-
       yield this.client.ReplaceMetadata({
         libraryId: this.libraryId,
         objectId: this.objectId,
@@ -1286,7 +1384,7 @@ class RootStore {
           tenantId: this.tenantId || "",
           sites: this.sites.map(site => site.objectId),
           fabric_users: fabricUsers,
-          ntp_instances: ntpInstances
+          ntp_instances: yield this.SaveNTPInstances(true)
         }
       });
 

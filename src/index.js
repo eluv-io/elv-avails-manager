@@ -21,6 +21,7 @@ import Action from "elv-components-js/src/components/Action";
 import timezones from "./TimeZones";
 import Settings from "./components/settings/Settings";
 import NTPInstances from "./components/NTPInstances";
+import NTPInstance from "./components/NTPInstance";
 
 if(typeof EluvioConfiguration === "undefined") {
   global.EluvioConfiguration = {};
@@ -110,6 +111,7 @@ class App extends React.Component {
 
             <Route exact path="/ntps" component={NTPInstances} />
             <Route exact path="/ntps/:ntpId" component={Titles} />
+            <Route exact path="/ntps/:ntpId/manage" component={NTPInstance} />
 
             <Route exact path="/titles" component={params => <Titles key="main-titles" {...params} />} />
             <Route exact path="/titles/:objectId" component={Title} />

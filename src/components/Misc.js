@@ -48,12 +48,12 @@ const DATE_FORMAT = {
   timeZoneName: "short"
 };
 
-export const FormatDate = (millis, long=false) => {
+export const FormatDate = (millis, long=false, customFormat) => {
   if(!millis || !isFinite(millis)) { return ""; }
 
   return long ?
-    DateTime.fromMillis(millis).toLocaleString({...DATE_FORMAT, second: "numeric"}) :
-    DateTime.fromMillis(millis).toLocaleString(DATE_FORMAT);
+    DateTime.fromMillis(millis).toLocaleString({...(customFormat || DATE_FORMAT), second: "numeric"}) :
+    DateTime.fromMillis(millis).toLocaleString(customFormat || DATE_FORMAT);
 };
 
 export const EffectiveAvailability = (startTimes, endTimes) => {
@@ -165,5 +165,15 @@ export const Filter = function(placeholder, onChange) {
   );
 };
 
+export const NTPBadge = ({startTime, endTime}) => {
+  const now = Date.now();
+  if(endTime < now) {
+    return <div className="ntp-badge expired">Expired</div>;
+  } else if(startTime > now) {
+    return <div className="ntp-badge upcoming">Upcoming</div>;
+  }
+
+  return <div className="ntp-badge active">Active</div>;
+};
 
 

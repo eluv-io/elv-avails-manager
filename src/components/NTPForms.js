@@ -1,18 +1,23 @@
 import React from "react";
 import {inject, observer} from "mobx-react";
 import {DeleteButton, InitPSF} from "./Misc";
-import {Action, DateSelection, LabelledField, LoadingElement, Modal} from "elv-components-js";
+import {Action, Checkbox, DateSelection, LabelledField, LoadingElement, Modal} from "elv-components-js";
 import ContentBrowser from "./ContentBrowser";
 import Groups from "./Groups";
 import PropTypes from "prop-types";
 
 @inject("rootStore")
 @observer
-class NTPForm extends React.Component {
+class NTPForms extends React.Component {
   constructor(props) {
     super(props);
 
     let additionalState = {
+      completed: 0,
+      total: 0,
+      useEmails: false,
+      emails: "",
+      count: 1,
       name: "",
       ntpId: "",
       objectId: "",
@@ -55,6 +60,10 @@ class NTPForm extends React.Component {
     this.SelectTargetObject({objectId: this.props.rootStore.objectId});
 
     this.setState({error: undefined});
+  }
+
+  NTP() {
+    return this.props.rootStore.allNTPInstances[this.props.ntpId];
   }
 
   CreateNTPInstanceForm() {
@@ -183,12 +192,12 @@ class NTPForm extends React.Component {
           </div>
         </LabelledField>
         <br />
-        <LoadingElement loading={this.state.loading} loadingClassname="no-margin">
-          <div className="form-actions">
+        <div className="form-actions">
+          <LoadingElement loading={this.state.loading} loadingClassname="no-margin">
             <Action className="secondary" onClick={this.props.onCancel}>Cancel</Action>
             <Action disabled={!this.state.objectId} type="submit">Create NTP Instance</Action>
-          </div>
-        </LoadingElement>
+          </LoadingElement>
+        </div>
       </form>
     );
   }
@@ -214,7 +223,7 @@ class NTPForm extends React.Component {
 
             await this.props.onComplete(this.props.ntpId, this.state.name);
           } catch (error) {
-            this.setState({error: "Failed to create NTP Instance"});
+            this.setState({error: "Failed to update NTP Instance"});
             // eslint-disable-next-line no-console
             console.error(error);
           } finally {
@@ -266,12 +275,12 @@ class NTPForm extends React.Component {
           />
         </LabelledField>
         <br />
-        <LoadingElement loading={this.state.loading} loadingClassname="no-margin">
-          <div className="form-actions">
+        <div className="form-actions">
+          <LoadingElement loading={this.state.loading} loadingClassname="no-margin">
             <Action className="secondary" onClick={this.props.onCancel}>Cancel</Action>
             <Action disabled={!this.state.objectId} type="submit">Update NTP Instance</Action>
-          </div>
-        </LoadingElement>
+          </LoadingElement>
+        </div>
       </form>
     );
   }
@@ -283,12 +292,12 @@ class NTPForm extends React.Component {
         onSubmit={async event => {
           event.preventDefault();
 
-          this.setState({error: undefined, validating: true});
+          this.setState({error: undefined, loading: true});
 
           try {
             await this.props.onComplete(this.state.ntpId, this.state.name);
           } catch (error) {
-            this.setState({error: "Invalid NTP"});
+            this.setState({error: "Invalid NTP", loading: false});
 
             // eslint-disable-next-line no-console
             console.error(`Failed to load NTP ${this.state.ntpId}:`);
@@ -315,24 +324,150 @@ class NTPForm extends React.Component {
         </LabelledField>
 
         <div className="form-actions">
-          <Action className="secondary" onClick={this.props.onCancel}>Cancel</Action>
-          <Action type="submit">Add NTP Instance</Action>
+          <LoadingElement loading={this.state.loading} loadingClassname="no-margin">
+            <Action className="secondary" onClick={this.props.onCancel}>Cancel</Action>
+            <Action type="submit">Add NTP Instance</Action>
+          </LoadingElement>
+        </div>
+      </form>
+    );
+  }
+
+  IssueTicketForm() {
+    if(this.state.issuedTickets) {
+      let failures;
+      if(this.state.issuedTickets.failures.length > 0) {
+        if(this.state.useEmails) {
+          failures = "Failed to issue tickets for the following emails:\n";
+          this.state.issuedTickets.failures.forEach(({email}) => failures = failures + `\n${email}`);
+          failures += "\n\n\n";
+        } else {
+          failures = `Failed to issue ${this.state.issuedTickets.failures.length} tickets\n\n\n`;
+        }
+      }
+
+      let tickets;
+      if(this.state.issuedTickets.tickets.length > 0) {
+        tickets = "Tickets Issued:\n";
+
+        if(this.state.useEmails) {
+          this.state.issuedTickets.tickets.forEach(({token, user_id}) => tickets = tickets + `\n${user_id} - ${token}`);
+        } else {
+          this.state.issuedTickets.tickets.forEach(({token}) => tickets = tickets + `\n${token}`);
+        }
+      }
+
+      return (
+        <form className="ntp-instance-form">
+          <legend>Issue Tickets for {this.NTP().name}</legend>
+
+          <pre>
+            { failures }
+            { tickets }
+          </pre>
+
+          <div className="form-actions">
+            <Action onClick={() => this.props.onComplete()}>Done</Action>
+          </div>
+        </form>
+      );
+    }
+
+    return (
+      <form
+        className="ntp-instance-form ntp-ticket-form"
+        onSubmit={async event => {
+          event.preventDefault();
+
+          this.setState({error: undefined, loading: true});
+
+          try {
+            const { tickets, failures } = await this.props.rootStore.IssueTickets({
+              ntpId: this.props.ntpId,
+              useEmails: this.state.useEmails,
+              count: this.state.count,
+              emails: this.state.emails,
+              callback: ({completed, total}) => {
+                this.setState({ticketsCompleted: completed, ticketsTotal: total});
+              }
+            });
+
+            this.setState({
+              issuedTickets: {
+                tickets,
+                failures
+              }
+            });
+          } catch (error) {
+            this.setState({error: error.message || error, loading: false});
+
+            // eslint-disable-next-line no-console
+            console.error(`Failed to issue ticket for ${this.state.ntpId}:`);
+            // eslint-disable-next-line no-console
+            console.error(error);
+          }
+        }}
+      >
+        <legend>Issue Ticket for {this.NTP().name}</legend>
+        <div key={`error-${this.state.error}-${Math.random()}`} className="message error-message">{ this.state.error }</div>
+
+        { this.state.ticketsTotal ?
+          <div className="ticket-status">Issuing Tickets: {this.state.ticketsCompleted} / {this.state.ticketsTotal} </div> : null }
+
+        <Checkbox
+          label="Associate tickets with emails"
+          value={this.state.useEmails}
+          onChange={value => this.setState({useEmails: value})}
+        />
+
+        {
+          this.state.useEmails ?
+            (
+              <LabelledField label="Email Addresses (comma separated)" className="align-top">
+                <textarea
+                  value={this.state.emails}
+                  onChange={event => this.setState({emails: event.target.value, error: undefined})}
+                />
+              </LabelledField>
+            ) :
+            (
+              <LabelledField label="Number of Tickets">
+                <input
+                  type="number"
+                  step={1}
+                  value={this.state.count}
+                  onChange={event => this.setState({count: event.target.value, error: undefined})}
+                />
+              </LabelledField>
+            )
+        }
+
+        <div className="form-actions">
+          <LoadingElement loading={this.state.loading} loadingClassname="no-margin">
+            <Action className="secondary" onClick={this.props.onCancel}>Cancel</Action>
+            <Action type="submit">Issue Ticket</Action>
+          </LoadingElement>
         </div>
       </form>
     );
   }
 
   render() {
+    let form;
+    if(this.props.create) {
+      form = this.CreateNTPInstanceForm();
+    } else if(this.props.edit) {
+      form = this.EditNTPInstanceForm();
+    } else if(this.props.issue) {
+      form = this.IssueTicketForm();
+    } else {
+      form = this.AddNTPInstanceForm();
+    }
+
     return (
       <div className="ntp-browser">
         { this.state.modal }
-        {
-          this.props.create ?
-            this.CreateNTPInstanceForm() :
-            this.props.edit && this.props.ntpId ?
-              this.EditNTPInstanceForm():
-              this.AddNTPInstanceForm()
-        }
+        { form }
       </div>
     );
   }
@@ -381,12 +516,13 @@ class NTPForm extends React.Component {
   }
 }
 
-NTPForm.propTypes = {
+NTPForms.propTypes = {
   create: PropTypes.bool,
   edit: PropTypes.bool,
+  issue: PropTypes.bool,
   ntpId: PropTypes.string,
   onComplete: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired
 };
 
-export default NTPForm;
+export default NTPForms;

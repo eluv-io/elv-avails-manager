@@ -224,10 +224,10 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 }
 
 .ntp-instance-list-entry {
-  grid-template-columns: 1fr 1fr 1fr 6rem;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 6rem;
 
   &.list-entry-selectable {
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
   }
 }
 
@@ -237,6 +237,10 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 
 .ntp-object-list-entry {
   grid-template-columns: 1fr;
+}
+
+.ntp-tickets-list-entry {
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .sites-list-entry {
