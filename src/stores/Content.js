@@ -106,15 +106,13 @@ class ContentStore {
         libraryId,
         filterOptions: {
           filter: !filter ? undefined : {
-            key: "public/asset_metadata/title",
+            key: "public/name",
             type: "cnt",
             filter
           },
           select: [
             "public/name",
             "public/description",
-            "public/asset_metadata/title",
-            "public/asset_metadata/display_title",
             "public/asset_metadata/asset_type",
             "public/asset_metadata/title_type",
             "public/asset_metadata/info/status"
@@ -134,11 +132,6 @@ class ContentStore {
         const metadata = versions[0].meta || {};
         metadata.public = metadata.public || {};
 
-        // TODO: Temporary - Remove when content is fixed
-        if((metadata.public.name || "").toLowerCase().startsWith("z_old")) {
-          return;
-        }
-
         metadata.public.asset_metadata = metadata.public.asset_metadata || {};
         metadata.public.asset_metadata = {
           ...(metadata.asset_metadata || {}),
@@ -146,10 +139,9 @@ class ContentStore {
         };
 
         let name =
+          metadata.public.name ||
           metadata.public.asset_metadata.title ||
           metadata.public.asset_metadata.displayTitle ||
-          metadata.public.name ||
-          metadata.name ||
           "";
 
         const status = (metadata.public.asset_metadata.info || {}).status;

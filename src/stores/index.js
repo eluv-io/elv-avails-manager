@@ -230,18 +230,15 @@ class RootStore {
       objectId,
       select: [
         "public/name",
-        "public/asset_metadata/title",
-        "public/asset_metadata/display_title",
         "public/asset_metadata/info/status"
       ]
     })) || {};
 
-    const assetMetadata = (metadata.public || {}).asset_metadata || {};
 
-    const displayTitle = assetMetadata.display_title || assetMetadata.title || (metadata.public || {}).name;
+    const displayTitle = this.SafeTraverse(metadata, "public/name");
     let displayTitleWithStatus = displayTitle;
 
-    const status = (assetMetadata.info || {}).status;
+    const status = this.SafeTraverse(metadata, "public/asset_metadata/info/status");
     if(status) {
       displayTitleWithStatus = `${displayTitle} (${status})`;
     }
@@ -306,8 +303,8 @@ class RootStore {
       select: [
         "offerings",
         "assets",
-        "public/asset_metadata/display_title",
         "public/asset_metadata/title",
+        "public/asset_metadata/display_title",
         "public/asset_metadata/sources",
         "public/asset_metadata/ip_title_id",
         "public/asset_metadata/synopsis",
@@ -1268,7 +1265,7 @@ class RootStore {
         // Profiles
 
         permissionSpec[titleId] = {
-          display_title: this.allTitles[titleId].displayTitle,
+          display_title: this.allTitles[titleId].displayTitleWithStatus || this.allTitles[titleId].displayTitle,
           profiles: {},
           permissions: []
         };

@@ -34,7 +34,7 @@ class Titles extends React.Component {
 
     this.InitPSF = InitPSF.bind(this);
     this.InitPSF({
-      sortKey: "displayTitle",
+      sortKey: "displayTitleWithStatus",
       perPage: this.Target() ? 10 : 100
     });
   }
@@ -64,14 +64,14 @@ class Titles extends React.Component {
   TargetPermissions() {
     const permissions = this.props.rootStore.targetTitlePermissions(this.Target().address)
       .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
-      .filter(title => !this.state.activeFilter || title.displayTitle.toLowerCase().includes(this.state.activeFilter));
+      .filter(title => !this.state.activeFilter || title.displayTitleWithStatus.toLowerCase().includes(this.state.activeFilter));
 
     return (
       <React.Fragment>
         { this.PageControls(permissions.length) }
         <div className="list title-profile-list">
           <div className="list-entry list-header target-permission-list-entry title-permission-list-header">
-            { this.SortableHeader("displayTitle", "Title") }
+            { this.SortableHeader("displayTitleWithStatus", "Title") }
             { this.SortableHeader("profile", "Availability Profile") }
             { this.SortableHeader("startTime", "Start Time") }
             { this.SortableHeader("endTime", "End Time") }
@@ -88,13 +88,13 @@ class Titles extends React.Component {
 
                 return (
                   <div className={`list-entry target-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`} key={`title-permission-${this.Target().address}-${titlePermission.objectId}`}>
-                    <div className="small-font" title={titlePermission.displayTitle}>
-                      <ToolTip content={`Go to ${titlePermission.displayTitle}`}>
+                    <div className="small-font" title={titlePermission.displayTitleWithStatus}>
+                      <ToolTip content={`Go to ${titlePermission.displayTitleWithStatus}`}>
                         <Link to={UrlJoin("/titles", titlePermission.objectId)} className="title-link">
                           <ImageIcon icon={LinkIcon} />
                         </Link>
                       </ToolTip>
-                      { titlePermission.displayTitle }
+                      { titlePermission.displayTitleWithStatus }
                     </div>
                     <div>
                       <select
@@ -143,7 +143,7 @@ class Titles extends React.Component {
         { this.PageControls(titles.length) }
         <div className="list titles-list">
           <div className="list-entry titles-list-entry list-header titles-list-header">
-            { this.SortableHeader("displayTitle", "Title")}
+            { this.SortableHeader("displayTitleWithStatus", "Title")}
             <div>Permissions</div>
             <div />
           </div>
@@ -156,7 +156,7 @@ class Titles extends React.Component {
                 to={UrlJoin(this.props.location.pathname, title.objectId)}
                 className={`list-entry titles-list-entry ${index % 2 === 0 ? "even" : "odd"}`}
               >
-                <div>{ title.displayTitle }</div>
+                <div>{ title.displayTitleWithStatus }</div>
                 <div>{ Object.keys(this.props.rootStore.titlePermissions[title.objectId] || {}).length }</div>
                 <div className="actions-cell">
                   <DeleteButton
