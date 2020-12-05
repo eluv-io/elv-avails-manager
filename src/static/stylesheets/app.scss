@@ -164,6 +164,7 @@ main,
   align-items: center;
   display: flex;
   margin: 0 0 $elv-spacing-m;
+  position: relative;
   width: 100%;
 }
 
@@ -325,6 +326,43 @@ button {
   overflow-y: auto;
 }
 
+.title-permissions-icon {
+  &.inactive {
+    stroke: $elv-color-mediumred;
+  }
+}
+
+.title-active-info {
+  align-items: center;
+  display: flex;
+  font-size: $elv-font-xl;
+  position: absolute;
+  right: $elv-spacing-s;
+  top: $elv-spacing-m;
+}
+
+.title-active-button {
+  margin-left: $elv-spacing-s;
+  min-height: $elv-spacing-l;
+
+  &.title-active-button {
+    svg {
+      stroke: $elv-color-mediumblue;
+    }
+  }
+
+  &.inactive {
+    svg {
+      stroke: $elv-color-mediumred;
+    }
+  }
+
+  &:hover {
+    svg {
+      stroke: $elv-color-lightblue;
+    }
+  }
+}
 
 .fullscreen-modal {
   .-elv-modal-content {
@@ -475,7 +513,7 @@ form {
   border-radius: $elv-spacing-xxs;
   color: $elv-color-white;
   font-size: $elv-font-m;
-  margin: 0 $elv-spacing-xs;
+  margin: 0 $elv-spacing-s;
   padding: $elv-spacing-xxs $elv-spacing-s;
 
   &.expired {

@@ -3,13 +3,17 @@ import Path from "path";
 import {inject, observer} from "mobx-react";
 import {BackButton} from "./Misc";
 import AsyncComponent from "./AsyncComponent";
-import {Action, Form, LabelledField, Modal, Tabs} from "elv-components-js";
+import {Action, Form, IconButton, LabelledField, Modal, Tabs} from "elv-components-js";
 
 import AppFrame from "./AppFrame";
 import TitleProfile from "./permissions/TitleProfile";
 import AssetList from "./AssetList";
 import OfferingList from "./OfferingList";
 import TitlePermissions from "./permissions/TitlePermissions";
+
+import CheckIcon from "../static/icons/check-circle.svg";
+import MinusCircleIcon from "../static/icons/minus-circle.svg";
+
 
 @inject("rootStore")
 @observer
@@ -145,12 +149,23 @@ class Title extends React.Component {
 
     const group = this.Group();
 
+    const active = this.props.rootStore.titleOptions[this.Title().objectId].active;
+
     return (
       <div className="page-container">
         { this.state.modal ? this.TitleProfileModal() : null }
         <div className="page-header">
           <BackButton to={Path.dirname(this.props.location.pathname)} />
           <h1>{ group ? `${group.name} | ${this.Title().title} | Title Permissions` : this.Title().displayTitleWithStatus }</h1>
+          <div className="title-active-info">
+            { active ? "Permissions Active" : "Permissions Inactive"}
+            <IconButton
+              icon={active ? CheckIcon : MinusCircleIcon}
+              onClick={() => this.props.rootStore.UpdateTitleOption(this.Title().objectId, "active", !active)}
+              className={`title-active-button ${active ? "active" : "inactive"}`}
+              title={active ? "Permissions Active" : "Permissions Inactive" }
+            />
+          </div>
         </div>
 
         <Tabs

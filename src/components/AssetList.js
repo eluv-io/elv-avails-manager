@@ -74,7 +74,7 @@ class AssetList extends React.Component {
           </div>
           <div>{ asset.assetTitle }</div>
           <div>{ asset.asset_type }</div>
-          <div>{ PrettyBytes(asset.attachment_file_size) }</div>
+          <div>{ PrettyBytes(asset.attachment_file_size || 0) }</div>
           { this.props.withPermissions ? <div>{asset.permission === "full-access" ? "Full Access" : "No Access"} </div> : null }
           { this.props.withPermissions ? <div className="date-field">{FormatDate(asset.startTime)} </div> : null }
           { this.props.withPermissions ? <div className="date-field">{FormatDate(asset.endTime)} </div> : null }
@@ -95,7 +95,7 @@ class AssetList extends React.Component {
         </div>
         <div>{ asset.assetTitle }</div>
         <div>{ asset.asset_type }</div>
-        <div>{ PrettyBytes(asset.attachment_file_size) }</div>
+        <div>{ PrettyBytes(asset.attachment_file_size || 0) }</div>
         { this.props.withPermissions ? <div>{asset.permission === "full-access" ? "Full Access" : "No Access"} </div> : null }
         { this.props.withPermissions ? <div className="date-field">{FormatDate(asset.startTime)} </div> : null }
         { this.props.withPermissions ? <div className="date-field">{FormatDate(asset.endTime)} </div> : null }

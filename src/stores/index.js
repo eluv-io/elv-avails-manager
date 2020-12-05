@@ -39,6 +39,8 @@ class RootStore {
   // User/Group permissions
   @observable titlePermissions = {};
 
+  @observable titleOptions = {};
+
   // Things with permissions
   @observable allTitles = {};
 
@@ -274,6 +276,12 @@ class RootStore {
         this.titleProfiles[objectId] = {};
       }
     }
+
+    if(!this.titleOptions[objectId]) {
+      this.titleOptions[objectId] = {
+        active: true
+      };
+    }
   });
 
   @action.bound
@@ -281,6 +289,7 @@ class RootStore {
     delete this.allTitles[objectId];
     delete this.titlePermissions[objectId];
     delete this.titleProfiles[objectId];
+    delete this.titleOptions[objectId];
   }
 
   @action.bound
@@ -397,6 +406,11 @@ class RootStore {
 
     this.allTitles[objectId].fullyLoaded = true;
   });
+
+  @action.bound
+  UpdateTitleOption(titleId, key, value) {
+    this.titleOptions[titleId][key] = value;
+  }
 
   @action.bound
   AddTitleProfile(objectId, name) {
@@ -1125,6 +1139,12 @@ class RootStore {
         await this.AddTitle({objectId: titleId, defaultProfiles: false, displayTitle: authSpec[titleId].display_title});
 
         runInAction(() => {
+          // Options
+          this.titleOptions[titleId] = {
+            active: typeof authSpec[titleId].active === "boolean" && !authSpec[titleId].active ? false : true
+          };
+
+          // Profiles
           const profiles = Object.keys(authSpec[titleId].profiles || {});
           for(let i = 0; i < profiles.length; i++) {
             const profileName = profiles[i];
@@ -1269,6 +1289,10 @@ class RootStore {
           profiles: {},
           permissions: []
         };
+
+        if(!(this.titleOptions[titleId] || {}).active) {
+          permissionSpec[titleId].active = false;
+        }
 
         Object.keys(this.titleProfiles[titleId]).forEach(profileName => {
           const profile = this.titleProfiles[titleId][profileName];

@@ -19,7 +19,10 @@ import {
 } from "./Misc";
 import Path from "path";
 import AsyncComponent from "./AsyncComponent";
+
 import LinkIcon from "../static/icons/link.svg";
+import CheckIcon from "../static/icons/check-circle.svg";
+import MinusCircleIcon from "../static/icons/minus-circle.svg";
 
 @inject("rootStore")
 @observer
@@ -134,9 +137,10 @@ class Titles extends React.Component {
   }
 
   TitleList() {
-    const titles = !this.state.activeFilter ?
+    const titles = (!this.state.activeFilter ?
       this.props.rootStore.titles :
-      this.props.rootStore.titlesTrie.get(this.state.activeFilter).map(result => result.value);
+      this.props.rootStore.titlesTrie.get(this.state.activeFilter).map(result => result.value))
+      .map(title => ({...title, active: this.props.rootStore.titleOptions[title.objectId].active}));
 
     return (
       <React.Fragment>
@@ -144,6 +148,7 @@ class Titles extends React.Component {
         <div className="list titles-list">
           <div className="list-entry titles-list-entry list-header titles-list-header">
             { this.SortableHeader("displayTitleWithStatus", "Title")}
+            { this.SortableHeader("active", "Active")}
             <div>Permissions</div>
             <div />
           </div>
@@ -157,6 +162,13 @@ class Titles extends React.Component {
                 className={`list-entry titles-list-entry ${index % 2 === 0 ? "even" : "odd"}`}
               >
                 <div>{ title.displayTitleWithStatus }</div>
+                <div>
+                  <ImageIcon
+                    icon={title.active ? CheckIcon : MinusCircleIcon}
+                    className={`title-permissions-icon ${title.active ? "active" : "inactive"}`}
+                    title={title.active ? "Permissions Active" : "Permissions Inactive"}
+                  />
+                </div>
                 <div>{ Object.keys(this.props.rootStore.titlePermissions[title.objectId] || {}).length }</div>
                 <div className="actions-cell">
                   <DeleteButton

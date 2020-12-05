@@ -36,14 +36,20 @@ class ContentStore {
         fabricURIs: EluvioConfiguration.searchNodes.map(node => URI(node).protocol("https").toString().replace("///", "//"))
       });
 
+      const terms = filter.split(" ").join(" AND ");
       const startIndex = (page - 1) * perPage;
+
       const {pagination, results} = yield client.LinkData({
         libraryId: site.libraryId,
         objectId: site.objectId,
         linkPath: "public/search",
         queryParams: {
-          select: ["public/asset_metadata/title", "public/asset_metadata/display_title"],
-          terms: `(f_asset_type:primary${filter ? ` AND f_display_title:${encodeURIComponent(filter)}`: ""})`,
+          select: [
+            "public/name",
+            "public/asset_metadata/ip_title_id",
+            "public/asset_metadata/info/status"
+          ],
+          terms: `(f_asset_type:primary${filter ? ` AND ${terms}` : ""})`,
           start: startIndex,
           limit: this.objectsPerPage
         }
@@ -58,10 +64,19 @@ class ContentStore {
         limit: this.objectsPerPage
       };
 
-      this.siteTitles = results.map(title => ({
-        name: this.rootStore.SafeTraverse(title, "meta/public/asset_metadata/title") || this.rootStore.SafeTraverse(title, "meta/public/asset_metadata/display_title"),
-        id: title.id
-      }));
+      this.siteTitles = results.map(title => {
+
+        let name = title.meta.public.name;
+        const status = this.rootStore.SafeTraverse(title, "meta/public/asset_metadata/info/status");
+        if(status) {
+          name = `${name} (${status})`;
+        }
+
+        return {
+          name,
+          id: title.id
+        };
+      });
     } finally {
       yield client.SetNodes(initialNodes);
     }
