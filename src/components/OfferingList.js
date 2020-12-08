@@ -77,22 +77,29 @@ class OfferingList extends React.Component {
       }, () => this.props.onSelect(this.state.selected));
     };
 
-    return (
-      <div className="offerings-list">
+    let controls;
+    if(!this.props.noControls) {
+      controls = (
         <div className="controls">
           { this.props.actions }
           { this.props.offerings.length > 0 && this.props.selectable ? <Action className="secondary" onClick={SelectAll}>Select All</Action> : null }
           { this.state.selected.length > 0 && this.props.selectable ? <Action className="secondary" onClick={Clear}>Clear Selected</Action> : null }
           <input className="filter" name="filter" value={this.state.filter} onChange={event => this.setState({filter: event.target.value})} placeholder="Filter Offerings..."/>
         </div>
+      );
+    }
+
+    return (
+      <div className="offerings-list">
+        { controls }
         <div className="list">
           <div className={`list-entry offerings-list-entry list-header offerings-list-header ${this.props.withPermissions ? "offerings-list-entry-with-permissions" : ""}`}>
             { this.SortableHeader("offeringKey", "Offering") }
             { this.SortableHeader("playoutFormats", "Playout Formats") }
             { this.props.withPermissions ? this.SortableHeader("permission", "Permission") : null }
             { this.props.withPermissions ? this.SortableHeader("geoRestriction", "Geo Restriction") : null }
-            { this.props.withPermissions ? this.SortableHeader("startTime", "Start Time") : null }
-            { this.props.withPermissions ? this.SortableHeader("endTime", "End Time") : null }
+            { this.props.withPermissions ? this.SortableHeader("startTime", `${this.props.effective ? "Effective" :""} Start Time`) : null }
+            { this.props.withPermissions ? this.SortableHeader("endTime", `${this.props.effective ? "Effective" :""} End Time`) : null }
           </div>
 
           {
@@ -119,7 +126,9 @@ OfferingList.propTypes = {
     PropTypes.array,
     PropTypes.node
   ]),
-  profile: PropTypes.object
+  profile: PropTypes.object,
+  noControls: PropTypes.bool,
+  effective: PropTypes.bool
 };
 
 export default OfferingList;

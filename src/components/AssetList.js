@@ -128,14 +128,21 @@ class AssetList extends React.Component {
       }, () => this.props.onSelect(this.state.selected));
     };
 
-    return (
-      <div className="assets-list">
-        <div className="controls">
+    let controls;
+    if(!this.props.noControls) {
+      controls = (
+        <div className="controls" hidden={this.props.noControls}>
           { this.props.actions }
           { this.props.assets.length > 0 && this.props.selectable ? <Action className="secondary" onClick={SelectAll}>Select All</Action> : null }
           { this.state.selected.length > 0 && this.props.selectable ? <Action className="secondary" onClick={Clear}>Clear Selected</Action> : null }
           <input className="filter" name="filter" value={this.state.filter} onChange={event => this.setState({filter: event.target.value})} placeholder="Filter Assets..."/>
         </div>
+      );
+    }
+
+    return (
+      <div className="assets-list">
+        { controls }
         <div className="title-view">
           <LabelledField label="Assets" value={assets.length} />
         </div>
@@ -146,8 +153,8 @@ class AssetList extends React.Component {
             { this.SortableHeader("asset_type", "Type") }
             { this.SortableHeader("attachment_file_size", "Size") }
             { this.props.withPermissions ? this.SortableHeader("permission", "Permission") : null }
-            { this.props.withPermissions ? this.SortableHeader("startTime", "Start Time") : null }
-            { this.props.withPermissions ? this.SortableHeader("endTime", "End Time") : null }
+            { this.props.withPermissions ? this.SortableHeader("startTime", `${this.props.effective ? "Effective" :""} Start Time`) : null }
+            { this.props.withPermissions ? this.SortableHeader("endTime", `${this.props.effective ? "Effective" :""} End Time`) : null }
           </div>
           { assets.map(this.AssetEntry) }
         </div>
@@ -167,7 +174,9 @@ AssetList.propTypes = {
     PropTypes.array,
     PropTypes.node
   ]),
-  profile: PropTypes.object
+  profile: PropTypes.object,
+  noControls: PropTypes.bool,
+  effective: PropTypes.bool
 };
 
 export default AssetList;

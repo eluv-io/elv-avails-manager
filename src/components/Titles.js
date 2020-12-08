@@ -15,7 +15,7 @@ import {
   BackButton,
   DeleteButton,
   EffectiveAvailability,
-  InitPSF, NTPBadge
+  InitPSF, NTPBadge, PermissionDetailsButton
 } from "./Misc";
 import Path from "path";
 import AsyncComponent from "./AsyncComponent";
@@ -121,6 +121,8 @@ class Titles extends React.Component {
                       { EffectiveAvailability([profile.startTime, titlePermission.startTime], [profile.endTime, titlePermission.endTime])}
                     </div>
                     <div className="actions-cell">
+                      <PermissionDetailsButton to={UrlJoin(this.props.location.pathname, titlePermission.objectId)} />
+
                       <DeleteButton
                         confirm="Are you sure you want to remove this title?"
                         title={`Remove ${titlePermission.displayTitle}`}

@@ -6,12 +6,13 @@ import {Link} from "react-router-dom";
 import BackIcon from "../static/icons/directory_back.svg";
 import DeleteIcon from "../static/icons/trash.svg";
 import AlertIcon from "../static/icons/alert-circle.svg";
+import ListIcon from "../static/icons/list.svg";
 
 export const BackButton = ({to}) => (
   <Link to={to} className="back-button">
     <IconButton
       icon={BackIcon}
-      label={"Back"}
+      label="Back"
     />
   </Link>
 );
@@ -37,6 +38,15 @@ export const DeleteButton = ({Delete, confirm, title="Remove", className="", dis
     />
   );
 };
+
+export const PermissionDetailsButton = ({to}) => (
+  <Link to={to} className="details-button">
+    <IconButton
+      icon={ListIcon}
+      label="Permission Details"
+    />
+  </Link>
+);
 
 
 const DATE_FORMAT = {
@@ -213,7 +223,7 @@ export const DateFieldAlert = (message) => {
   return (
     <ToolTip content={message} className="date-field-alert-tooltip">
       <ImageIcon
-        className="date-field-alert"
+        className="help-icon date-field-alert"
         icon={AlertIcon}
       />
     </ToolTip>

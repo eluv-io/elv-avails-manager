@@ -142,7 +142,6 @@ main,
   flex: 1 1 auto;
   flex-direction: column;
   height: 100%;
-  max-height: calc(100vh - 3rem);
 }
 
 .page-container {
@@ -310,7 +309,6 @@ button {
   flex-direction: column;
   max-height: 100%;
   overflow-y: hidden;
-  padding: $elv-spacing-xxs;
 }
 
 .title-permission-modal,
@@ -567,16 +565,21 @@ form {
   }
 }
 
+.help-icon {
+  &.help-icon {
+    cursor: pointer;
+    height: 1.25rem;
+    width: 1.25rem;
+  }
+}
+
 .date-input-with-alert {
   align-items: center;
   display: flex;
 
   .date-field-alert {
-    cursor: pointer;
-    height: $elv-spacing-m;
     margin: 0 0 $elv-spacing-xs $elv-spacing-xs;
     stroke: $elv-color-mediumred;
-    width: $elv-spacing-m;
   }
 }
 
@@ -588,7 +591,32 @@ form {
 
 .-elv-tooltip {
   &.-elv-tooltip {
-    max-width: unset;
+    max-width: 25rem;
     padding: $elv-spacing-s;
   }
+}
+
+.permission-details {
+  h3 {
+    margin: $elv-spacing-s 0;
+  }
+
+  .-elv-labelled-field {
+    grid-template-columns: 12rem 1fr;
+
+    label {
+      span {
+        align-items: center;
+        display: flex;
+      }
+
+      .help-icon {
+        margin-left: $elv-spacing-xxs;
+      }
+    }
+  }
+}
+
+.permission-details-list {
+  margin: $elv-spacing-s 0;
 }

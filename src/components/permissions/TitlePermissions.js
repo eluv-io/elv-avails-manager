@@ -2,7 +2,7 @@ import React from "react";
 import {inject, observer} from "mobx-react";
 import PropTypes from "prop-types";
 
-import {DeleteButton, EffectiveAvailability, InitPSF} from "../Misc";
+import {DeleteButton, EffectiveAvailability, InitPSF, PermissionDetailsButton} from "../Misc";
 import {Action, DateSelection, ImageIcon, Modal, ToolTip} from "elv-components-js";
 import {withRouter} from "react-router";
 
@@ -120,6 +120,7 @@ class TitlePermissions extends React.Component {
                       { EffectiveAvailability([profile.startTime, permissions.startTime], [profile.endTime, permissions.endTime])}
                     </div>
                     <div className="actions-cell">
+                      <PermissionDetailsButton to={UrlJoin(this.props.location.pathname, target.address)} />
                       <DeleteButton
                         confirm="Are you sure you want to remove this permission?"
                         title={`Remove ${permissions.name}`}
