@@ -1,12 +1,12 @@
 import React from "react";
 import {inject, observer} from "mobx-react";
-import {Action, Confirm, DateSelection, Modal, Selection} from "elv-components-js";
+import {Action, Confirm, Modal, Selection} from "elv-components-js";
 import PropTypes from "prop-types";
 import {toJS} from "mobx";
 import {withRouter} from "react-router";
 import OfferingList from "../OfferingList";
 import AsyncComponent from "../AsyncComponent";
-import {BackButton} from "../Misc";
+import {BackButton, ProfileDateSelection} from "../Misc";
 import Path from "path";
 
 @inject("rootStore")
@@ -39,8 +39,8 @@ class OfferingSelectionModal extends React.Component {
           options={[["No Access", "no-access"], ["Full Access", "full-access"]]}
           onChange={permission => this.setState({permission})}
         />
-        <DateSelection readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
-        <DateSelection readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
+        <ProfileDateSelection profile={this.props.profile} readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
+        <ProfileDateSelection profile={this.props.profile} readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
         <Selection
           label="Geo Restriction"
           value={this.state.geoRestriction}
@@ -75,6 +75,7 @@ class OfferingSelectionModal extends React.Component {
 }
 
 OfferingSelectionModal.propTypes = {
+  profile: PropTypes.object.isRequired,
   objectId: PropTypes.string.isRequired,
   onSubmit: PropTypes.func.isRequired
 };
@@ -127,8 +128,8 @@ class OfferingPermissions extends React.Component {
           options={[["No Access", "no-access"], ["Full Access", "full-access"]]}
           onChange={permission => this.setState({permission})}
         />
-        <DateSelection readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
-        <DateSelection readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
+        <ProfileDateSelection profile={this.PermissionInfo()} readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
+        <ProfileDateSelection profile={this.PermissionInfo()} readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
         <Selection
           label="Geo Restriction"
           value={this.state.geoRestriction}
@@ -177,6 +178,7 @@ class OfferingPermissions extends React.Component {
                     startTime: undefined,
                     endTime: undefined,
                     permission: "full-access",
+                    geoRestriction: "unrestricted",
                     version: this.state.version + 1
                   });
                 }
@@ -217,7 +219,28 @@ class OfferingPermissions extends React.Component {
           offerings={this.PermissionInfo().offeringPermissions}
           withPermissions
           selectable
-          onSelect={selectedOfferings => this.setState({selectedOfferings})}
+          profile={this.PermissionInfo()}
+          onSelect={selectedOfferings => {
+            if(selectedOfferings.length === 1 && this.state.selectedOfferings.length <= 1) {
+              // One item selected, populate existing values
+              this.setState({
+                startTime: selectedOfferings[0].startTime,
+                endTime: selectedOfferings[0].endTime,
+                permission: selectedOfferings[0].permission,
+                geoRestriction: selectedOfferings[0].geoRestriction
+              });
+            } else if(this.state.selectedOfferings.length === 0) {
+              // New item(s) selected, ensure form options are cleared
+              this.setState({
+                startTime: undefined,
+                endTime: undefined,
+                permission: "full-access",
+                geoRestriction: "unrestricted"
+              });
+            }
+
+            this.setState({selectedOfferings});
+          }}
           actions={
             <Action onClick={this.ActivateModal}>Add Offering Permissions</Action>
           }
@@ -281,7 +304,11 @@ class OfferingPermissions extends React.Component {
           closable={true}
           OnClickOutside={this.CloseModal}
         >
-          <OfferingSelectionModal objectId={this.props.match.params.objectId} onSubmit={this.SetOfferingPermissions} />
+          <OfferingSelectionModal
+            profile={this.PermissionInfo()}
+            objectId={this.props.match.params.objectId}
+            onSubmit={this.SetOfferingPermissions}
+          />
         </Modal>
       )
     });

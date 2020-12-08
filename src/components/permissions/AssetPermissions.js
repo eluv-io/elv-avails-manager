@@ -1,13 +1,13 @@
 import React from "react";
 import {inject, observer} from "mobx-react";
-import {Action, Confirm, DateSelection, Modal, Selection} from "elv-components-js";
+import {Action, Confirm, Modal, Selection} from "elv-components-js";
 import PropTypes from "prop-types";
 import AssetList from "../AssetList";
 import {toJS} from "mobx";
 import {withRouter} from "react-router";
 import AsyncComponent from "../AsyncComponent";
 import Path from "path";
-import {BackButton} from "../Misc";
+import {BackButton, ProfileDateSelection} from "../Misc";
 
 @inject("rootStore")
 @observer
@@ -38,8 +38,8 @@ class AssetSelectionModal extends React.Component {
           options={[["No Access", "no-access"], ["Full Access", "full-access"]]}
           onChange={permission => this.setState({permission})}
         />
-        <DateSelection readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
-        <DateSelection readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
+        <ProfileDateSelection profile={this.props.profile} readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
+        <ProfileDateSelection profile={this.props.profile} readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
         <div className="controls no-margin">
 
         </div>
@@ -69,6 +69,7 @@ class AssetSelectionModal extends React.Component {
 }
 
 AssetSelectionModal.propTypes = {
+  profile: PropTypes.object.isRequired,
   objectId: PropTypes.string.isRequired,
   onSubmit: PropTypes.func.isRequired
 };
@@ -121,8 +122,8 @@ class AssetPermissions extends React.Component {
           options={[["No Access", "no-access"], ["Full Access", "full-access"]]}
           onChange={permission => this.setState({permission})}
         />
-        <DateSelection readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
-        <DateSelection readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
+        <ProfileDateSelection profile={this.PermissionInfo()} readOnly label="Start Time" value={this.state.startTime} name="startTime" onChange={startTime => this.setState({startTime})} />
+        <ProfileDateSelection profile={this.PermissionInfo()} readOnly label="End Time" value={this.state.endTime} name="endTime" onChange={endTime => this.setState({endTime})} />
         <div className="controls">
           <Action
             onClick={async () =>
@@ -205,7 +206,26 @@ class AssetPermissions extends React.Component {
             baseUrl={this.Title().baseUrl}
             withPermissions
             selectable
-            onSelect={selectedAssets => this.setState({selectedAssets})}
+            profile={this.PermissionInfo()}
+            onSelect={selectedAssets => {
+              if(selectedAssets.length === 1 && this.state.selectedAssets.length <= 1) {
+                // One item selected, populate existing values
+                this.setState({
+                  startTime: selectedAssets[0].startTime,
+                  endTime: selectedAssets[0].endTime,
+                  permission: selectedAssets[0].permission,
+                });
+              } else if(this.state.selectedAssets.length === 0) {
+                // New item(s) selected, ensure form options are cleared
+                this.setState({
+                  startTime: undefined,
+                  endTime: undefined,
+                  permission: "full-access",
+                });
+              }
+
+              this.setState({selectedAssets});
+            }}
             actions={
               <Action onClick={this.ActivateModal}>Add Asset Permissions</Action>
             }
@@ -269,7 +289,11 @@ class AssetPermissions extends React.Component {
           closable={true}
           OnClickOutside={this.CloseModal}
         >
-          <AssetSelectionModal objectId={this.props.match.params.objectId} onSubmit={this.SetAssetPermissions} />
+          <AssetSelectionModal
+            profile={this.PermissionInfo()}
+            objectId={this.props.match.params.objectId}
+            onSubmit={this.SetAssetPermissions}
+          />
         </Modal>
       )
     });

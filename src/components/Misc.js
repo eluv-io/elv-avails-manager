@@ -1,10 +1,11 @@
 import React from "react";
 import {DateTime} from "luxon";
-import {Action, Confirm, IconButton} from "elv-components-js";
+import {Action, Confirm, DateSelection, IconButton, ImageIcon, Maybe, ToolTip} from "elv-components-js";
 import {Link} from "react-router-dom";
 
 import BackIcon from "../static/icons/directory_back.svg";
 import DeleteIcon from "../static/icons/trash.svg";
+import AlertIcon from "../static/icons/alert-circle.svg";
 
 export const BackButton = ({to}) => (
   <Link to={to} className="back-button">
@@ -176,4 +177,45 @@ export const NTPBadge = ({startTime, endTime}) => {
   return <div className="ntp-badge active">Active</div>;
 };
 
+export const ProfileDateSelection = (args) => {
+  return (
+    <div className="date-input-with-alert">
+      <DateSelection {...args} />
+      { ProfileDateWarning(args) }
+    </div>
+  );
+};
 
+export const ProfileDateWarning = ({name, profile, value}) => {
+  const profileTime = profile[name];
+
+  let alert;
+  if(profileTime) {
+    if(name === "startTime") {
+      if(value > profile.endTime) {
+        alert = "Warning: The start date for this item is later than the end date";
+      } else if(value < profileTime) {
+        alert = "Warning: The start date for this item is earlier than the start date for the profile. This item will not be available until the later profile date.";
+      }
+    } else if(name === "endTime") {
+      if(value < profile.startTime) {
+        alert = "Warning: The end date for this item is earlier than the start date";
+      } else if(value > profileTime) {
+        alert = "Warning: The end date for this item is later than the end date for the profile. This item will not be available until the later profile date.";
+      }
+    }
+  }
+
+  return Maybe(alert, DateFieldAlert(alert));
+};
+
+export const DateFieldAlert = (message) => {
+  return (
+    <ToolTip content={message} className="date-field-alert-tooltip">
+      <ImageIcon
+        className="date-field-alert"
+        icon={AlertIcon}
+      />
+    </ToolTip>
+  );
+};

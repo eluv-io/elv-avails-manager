@@ -6,7 +6,7 @@ import PictureIcon from "../static/icons/image.svg";
 import FileIcon from "../static/icons/file.svg";
 import {Link, withRouter} from "react-router-dom";
 import PrettyBytes from "pretty-bytes";
-import {ChangeSort, FormatDate, SortableHeader} from "./Misc";
+import {ChangeSort, FormatDate, ProfileDateWarning, SortableHeader} from "./Misc";
 
 @withRouter
 class AssetList extends React.Component {
@@ -83,6 +83,10 @@ class AssetList extends React.Component {
     }
 
     const isSelected = this.state.selected.find(entry => entry.assetKey === asset.assetKey);
+
+    const startWarning = this.props.profile ? ProfileDateWarning({name: "startTime", value: asset.startTime, profile: this.props.profile}) : undefined;
+    const endWarning = this.props.profile ? ProfileDateWarning({name: "endTime", value: asset.endTime, profile: this.props.profile}) : undefined;
+
     return (
       <div
         tabIndex={0}
@@ -97,8 +101,8 @@ class AssetList extends React.Component {
         <div>{ asset.asset_type }</div>
         <div>{ PrettyBytes(asset.attachment_file_size || 0) }</div>
         { this.props.withPermissions ? <div>{asset.permission === "full-access" ? "Full Access" : "No Access"} </div> : null }
-        { this.props.withPermissions ? <div className="date-field">{FormatDate(asset.startTime)} </div> : null }
-        { this.props.withPermissions ? <div className="date-field">{FormatDate(asset.endTime)} </div> : null }
+        { this.props.withPermissions ? <div className="date-field">{FormatDate(asset.startTime)} { startWarning }</div> : null }
+        { this.props.withPermissions ? <div className="date-field">{FormatDate(asset.endTime)} { endWarning }</div> : null }
       </div>
     );
   }
@@ -162,7 +166,8 @@ AssetList.propTypes = {
   actions: PropTypes.oneOfType([
     PropTypes.array,
     PropTypes.node
-  ])
+  ]),
+  profile: PropTypes.object
 };
 
 export default AssetList;

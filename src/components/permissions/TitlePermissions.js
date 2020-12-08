@@ -90,7 +90,7 @@ class TitlePermissions extends React.Component {
                     className={`list-entry title-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`}
                     key={`title-permission-${JSON.stringify(permissions)}`}
                   >
-                    <div title={target.name}>
+                    <div title={target.name} className="small-font">
                       <ToolTip content={`Go to ${target.name}`}>
                         <Link to={linkPath} className="title-link">
                           <ImageIcon icon={LinkIcon} />
@@ -123,7 +123,10 @@ class TitlePermissions extends React.Component {
                       <DeleteButton
                         confirm="Are you sure you want to remove this permission?"
                         title={`Remove ${permissions.name}`}
-                        Delete={() => this.props.rootStore.RemoveTitlePermission(this.props.objectId, address)}
+                        Delete={() => {
+                          this.props.rootStore.RemoveTitlePermission(this.props.objectId, address);
+                          this.setState({version: this.state.version + 1});
+                        }}
                       />
                     </div>
                   </div>

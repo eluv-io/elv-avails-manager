@@ -2,6 +2,8 @@
 
 $selected-color: lighten($elv-color-mediumblue, 10%);
 
+$font-size: 0.9rem;
+
 .list {
   display: flex;
   flex: 1 1 auto;
@@ -11,6 +13,7 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
 
 .list-entry {
   display: grid;
+  font-size: $font-size;
   position: relative;
 
   .small-font {
@@ -102,12 +105,15 @@ $selected-color: lighten($elv-color-mediumblue, 10%);
   }
 
   .date-field {
+    align-items: center;
+    display: flex;
     font-size: $elv-font-m;
   }
 
   select {
     @include elv-ellipsis;
     background-color: $elv-color-white;
+    font-size: $font-size;
     max-width: 100%;
   }
 

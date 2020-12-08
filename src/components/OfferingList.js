@@ -1,7 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 import {withRouter} from "react-router-dom";
-import {ChangeSort, FormatDate, SortableHeader} from "./Misc";
+import {ChangeSort, FormatDate, ProfileDateWarning, SortableHeader} from "./Misc";
 import {Action} from "elv-components-js";
 
 @withRouter
@@ -40,6 +40,10 @@ class OfferingList extends React.Component {
 
   OfferingEntry(offering, index) {
     const isSelected = this.state.selected.find(entry => entry.offeringKey === offering.offeringKey);
+
+    const startWarning = this.props.profile ? ProfileDateWarning({name: "startTime", value: offering.startTime, profile: this.props.profile}) : undefined;
+    const endWarning = this.props.profile ? ProfileDateWarning({name: "endTime", value: offering.endTime, profile: this.props.profile}) : undefined;
+
     return (
       <div
         tabIndex={0}
@@ -51,8 +55,8 @@ class OfferingList extends React.Component {
         <div title={offering.playoutFormats}><span>{ offering.playoutFormats }</span></div>
         { this.props.withPermissions ? <div>{offering.permission === "full-access" ? "Full Access" : "No Access"} </div> : null }
         { this.props.withPermissions ? <div>{offering.geoRestriction}</div> : null }
-        { this.props.withPermissions ? <div className="date-field">{FormatDate(offering.startTime)} </div> : null }
-        { this.props.withPermissions ? <div className="date-field">{FormatDate(offering.endTime)} </div> : null }
+        { this.props.withPermissions ? <div className="date-field">{ FormatDate(offering.startTime) } { startWarning }</div> : null }
+        { this.props.withPermissions ? <div className="date-field">{ FormatDate(offering.endTime) } { endWarning }</div> : null }
       </div>
     );
   }
@@ -114,7 +118,8 @@ OfferingList.propTypes = {
   actions: PropTypes.oneOfType([
     PropTypes.array,
     PropTypes.node
-  ])
+  ]),
+  profile: PropTypes.object
 };
 
 export default OfferingList;
