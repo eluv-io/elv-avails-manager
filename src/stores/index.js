@@ -33,6 +33,8 @@ class RootStore {
 
   @observable sites = [];
 
+  @observable policySettings = { require_perm_for_public_area: true };
+
   // Profile permissions
   @observable titleProfiles = {};
 
@@ -169,6 +171,11 @@ class RootStore {
   @action.bound
   SetTenantId(tenantId) {
     this.tenantId = tenantId;
+  }
+
+  @action.bound
+  SetPolicySetting(setting, value) {
+    this.policySettings[setting] = value;
   }
 
   @action.bound
@@ -1132,6 +1139,12 @@ class RootStore {
 
     if(!authSpec) { return; }
 
+    if(authSpec.settings) {
+      this.policySettings = authSpec.settings;
+    }
+
+    delete authSpec.settings;
+
     yield this.client.utils.LimitedMap(
       20,
       Object.keys(authSpec),
@@ -1280,6 +1293,9 @@ class RootStore {
   Save = flow(function * (commitMessage) {
     try {
       let permissionSpec = {};
+
+      // Policy Settings
+      permissionSpec.settings = toJS(this.policySettings);
 
       Object.keys(this.titleProfiles).forEach(titleId => {
         // Profiles
