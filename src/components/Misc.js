@@ -211,7 +211,7 @@ export const ProfileDateWarning = ({name, profile, value}) => {
       if(value < profile.startTime) {
         alert = "Warning: The end date for this item is earlier than the start date";
       } else if(value > profileTime) {
-        alert = "Warning: The end date for this item is later than the end date for the profile. This item will not be available until the later profile date.";
+        alert = "Warning: The end date for this item is later than the end date for the profile. This item will not be available after the earlier profile date.";
       }
     }
   }
