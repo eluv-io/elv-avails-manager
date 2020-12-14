@@ -67,7 +67,7 @@ class OfferingList extends React.Component {
 
     const SelectAll = () => {
       this.setState({
-        selected: this.props.offerings
+        selected: offerings
       }, () => this.props.onSelect(this.state.selected));
     };
 

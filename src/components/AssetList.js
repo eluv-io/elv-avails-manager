@@ -110,15 +110,16 @@ class AssetList extends React.Component {
   render() {
     const assets = this.props.assets
       .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
-      .filter(({attachment_file_name, asset_type}) =>
+      .filter(({assetTitle, attachment_file_name, asset_type}) =>
         !this.state.filter ||
-        ((attachment_file_name || "").toLowerCase().includes(this.state.filter.toLowerCase())
-          || (asset_type || "").toLowerCase().includes(this.state.filter.toLowerCase()))
+        ((assetTitle || "").toLowerCase().includes(this.state.filter.toLowerCase()) ||
+          (attachment_file_name || "").toLowerCase().includes(this.state.filter.toLowerCase()) ||
+          (asset_type || "").toLowerCase().includes(this.state.filter.toLowerCase()))
       );
 
     const SelectAll = () => {
       this.setState({
-        selected: this.props.assets
+        selected: assets
       }, () => this.props.onSelect(this.state.selected));
     };
 

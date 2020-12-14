@@ -7,7 +7,7 @@
   "homepage": "https://github.com/eluv-io/elv-avails-manager",
   "scripts": {
     "bump-version": "npm --git-tag-version --no-commit-hooks version patch",
-    "serve": "webpack-dev-server --hot --port 8087",
+    "serve": "webpack-dev-server --host 0.0.0.0 --hot --port 8087",
     "build": "rm -rf dist/* && NODE_ENV=production node ./node_modules/webpack-cli/bin/cli.js -p --progress --colors --devtool none",
     "add-build": "COMMIT=`git rev-parse HEAD` ; echo $COMMIT > dist/version.txt ; git add dist",
     "lint": "npm run fix-scss ; npm run lint-scss ; npm run fix-js",
