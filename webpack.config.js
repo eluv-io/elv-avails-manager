@@ -110,7 +110,7 @@ module.exports = {
         ],
       },
       {
-        test: /\.(txt|bin|abi)$/i,
+        test: /\.(txt|bin|abi|yaml)$/i,
         loader: "raw-loader"
       }
     ]

@@ -426,10 +426,16 @@ button {
 
 .-elv-button {
   &:disabled {
+    // sass-lint:disable no-important
+    background: $elv-color-white !important;
+    border: 1px solid $elv-color-mediumgray !important;
+    color: $elv-color-mediumgray !important;
+    cursor: unset;
+
     &:hover {
       // sass-lint:disable no-important
       background: $elv-color-white !important;
-      color: $elv-color-text-dark !important;
+      color: $elv-color-mediumgray !important;
       cursor: unset;
     }
   }
@@ -530,8 +536,16 @@ form {
   }
 }
 
-.settings-spacer {
-  margin-bottom: 5rem;
+.settings-page {
+  margin-right: $elv-spacing-xxl;
+
+  & > * {
+    margin-bottom: 3rem;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid $elv-color-lightgray;
+    }
+  }
 }
 
 .fabric-user-form {

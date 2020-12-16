@@ -1,0 +1,586 @@
+name: Asset Permission Policy v1.14
+desc: |
+  Centralized site policy enforcing asset and av offering permissions defined in
+  a separate asset permission data model. The data model consists of a top-level
+  map of content IDs that make up all contents (titles, series, etc.) of the
+  site. Each map entry lists the permissions for of users and groups for the
+  assets and offerings of the content object.
+
+  All public data (e.g. public meta data, thumbsnails, etc.) of all site
+  contents is accessible even if no access to any assets or av offerings are
+  granted.
+
+  The policy handles hierarchical permission delegation for the following use
+  case: a season, consisting of multiple episodes, is sold as a single
+  commercial entity. Someone who buys the season acquires the rights to all
+  episodes. The permissions are handled on the season, except for usually one
+  thing: the start time of an episode is defined on the episode itself, and
+  overrides the start time of the season. This allows adding and preparing
+  episodes before their actual release date. On the release date, they become
+  automatically accessible to all users that have the correct permissions on the
+  season.
+
+  Changelog:
+
+  v1.14
+    * allow q.read.part.read in node decrypt
+  v1.13
+    * add fn.ids.Equivalent, fix allowContentDecryptByLocalNode rule
+    * fix content decrypt by node for public content
+  v1.12
+    * add "settings" rule whose props can be overridden by a settings object in
+      permission data model
+    * add "require_perm_for_public_area" setting to require (any) permission for
+      public area access
+    * add "offering_exclusion_paths" setting to exclude certain rep paths from
+      being interpreted as an offering playout action (/playout/options.json)
+  v1.11
+    * add rule allowOffering to filter offerings
+  v1.10
+    * add permissions active flag check
+      {
+        "iq__4RNxJHGv4Rfu7P3GqiENHFFaMqip": {
+          "active": false,
+          "permissions": [ ... ],
+          "profiles": { ... }
+        }
+      }
+    * add unified search post-filtering rule "filter"
+  v1.9
+    * add filterOffering rule for seach post-filtering
+  v1.8
+    * add token/addr as "user" in addition to call/subject
+  v1.7
+    * add new "otp" permission type matching permission subject to token's
+      elv:otpId ctx value
+    * fix: enforce check of permission types
+  v1.6
+    * fix public area access to allow bitcode calls (regardless of entry point)
+  v1.5
+    * allow access to public area of content with visibility >= 1
+  v1.4
+    * add hierarchical permission delegation to handle series/seasons/episodes
+
+type: ast
+expr:
+  rule: main
+rules:
+
+  main:
+    or:
+      - rule: checkPermissions
+      - rule: isPublicContent
+
+  now:
+    fn.time.Now:
+
+  settings:
+    fn.data.Merge:
+      # Default settings
+      - literal:
+
+          # If true, access to public area requires that the user has a valid
+          # asset or offering permission.
+          require_perm_for_public_area: false
+
+          # Exclude bc call paths from being interpreted as the playout of an
+          # audio/video "offering". These paths are instead treated like any
+          # other rep calls (i.e. part of the "public area")
+          offering_exclusion_paths: [
+            "/playout/options.json"
+          ]
+
+      # Overrides from permission data
+      - env: data/settings
+        def:
+
+  # meta data path as path object to prevent path formatting issues
+  metaPath:
+    fn.data.ToPath:
+      - env: call/meta_path
+
+  # bc call path as path object to prevent path formatting issues
+  bcCallPath:
+    fn.data.ToPath:
+      - env: call/bc_call/path
+
+  isReadAsset:
+    or:
+      - and:
+          - eq:
+              - env: api_call/action
+              - q.read.files.read
+          - fn.strings.StartsWith:
+              - rule: metaPath
+              - "/files/assets/"
+      - and:
+          - eq:
+              - env: api_call/action
+              - q.read.meta
+          - fn.strings.StartsWith:
+              - rule: metaPath
+              - "/assets/"
+
+  isReadAudioVideo:
+    and:
+      - eq:
+          - env: api_call/action
+          - q.read.bccall
+      - eq:
+          - rule: bcCallPath/0
+          - "playout"
+      - not: # the rep path is not an exception path
+          in:
+            - rule: bcCallPath
+            - collect: # convert all exception paths to Path objects
+                src:
+                  rule: settings/offering_exclusion_paths
+                var: path
+                expr:
+                  fn.data.ToPath:
+                    var: path
+
+  publicContentOrNodeDecrypt:
+    or:
+      - rule: allowContentDecryptByLocalNode
+      - and:
+          - switch:
+              - case:
+                  rule: settings/require_perm_for_public_area
+                then:
+                  rule: hasPermission
+              - default: true
+          - rule: isPublicAreaAccess
+
+  hasPermission:
+    # iterate through all permissions
+    any:
+      src:
+        rule: content/permissions
+      var: perm
+      expr:
+        func: matchPermissionSubject
+
+  allowContentDecryptByLocalNode:
+    and:
+      - in:
+          - env: api_call/action
+          - - q.read.decrypt
+            - q.read.part.read
+      - fn.ids.Equivalent:
+          - env: call/subject
+          - env: call/node_id
+
+  isPublicContent:
+    and:
+      - fn.isContentPublic:
+      - or:
+          - rule: allowContentDecryptByLocalNode
+          - rule: isPublicAreaAccess
+
+  isPublicAreaAccess: # as if title was accessed with a "state-channel token" for the title
+    switch:
+      - case: # bc read and public meta access allowed independent of entry point
+          or:
+            - rule: isBcRead
+            - rule: isPublicMetaAccess
+            - in: # other "public" actions
+                - env: api_call/action
+                - - q.read.info
+                  - q.read.part.read
+                  - q.read.part.list
+                  - q.read.part.info
+                  - q.read.part.proofs
+                  - q.read.files.read
+                  - q.read.files.list
+                  - q.read.files.link
+                  - q.read.blob.link
+        then: true
+      - case: # any other actions not allowed in entry point
+          env: call/is_entry_point
+          def: true
+        then: false
+      - default:
+          and:
+            - not:
+                or:
+                  - env: call/is_encrypted_data
+                  - rule: isCryptRead
+                  - in:
+                      - env: api_call/action
+                      - - q.read.versions
+                        - q.read.decrypt
+            - or:
+                - rule: isMetaAccess
+                - rule: isFileAccess
+
+  isBcRead:
+    and:
+      - eq:
+          - env: api_call/action
+          - q.read.bccall
+
+  isPublicMetaAccess:
+    and:
+      - rule: isMetaAccess
+      - fn.strings.StartsWith:
+          - rule: metaPath
+          - /public
+
+  isMetaAccess:
+    eq:
+      - env: api_call/action
+      - q.read.meta
+
+  isFileAccess:
+    in:
+      - env: api_call/action
+      - - q.read.files.read
+        - q.read.files.list
+        - q.read.files.link
+
+  isEncryptedData:
+    and:
+      - in:
+          - env: api_call/action
+          - - q.read.part.read
+            - q.read.files.read
+      - env: call/is_encrypted_data
+
+  isCryptRead:
+    and:
+      - in:
+          - env: api_call/action
+          - q.read.crypt
+      - env: call/is_entry_point
+      - eq:
+          - env: call/grant
+          - read-crypt
+
+  contentIDs:
+    fn.getPermissionDelegates:
+    def:
+      env: call/resource_id
+
+  content:
+    fn.data.Merge:
+      collect:
+        src:
+          fn.data.Invert:
+            rule: contentIDs
+        var: contentID
+        expr:
+          env: data/${contentID}
+          def:
+
+  checkPermissions:
+    and:
+      - rule: isSiteContent
+      - switch:
+          - case:
+              rule: isReadAsset
+            then:
+              rule: readAsset
+          - case:
+              rule: isReadAudioVideo
+            then:
+              rule: readAudioVideo
+          - default:
+              rule: publicContentOrNodeDecrypt
+
+  isSiteContent:
+    and:
+      - not:
+          nil:
+            rule: content
+      - rule: isActive
+
+  isActive:
+    eq:
+      - rule: content/active
+        def: true
+      - true
+
+  readAsset:
+    and:
+      - rule: isReadAsset
+      - rule: assetPerms
+
+  assetPerms:
+    let:
+      # the asset name is the last segment of the path
+      - assetName:
+          rule: metaPath/-1
+    # iterate through all permissions
+    any:
+      src:
+        rule: content/permissions
+      var: perm
+      expr:
+        and:
+          - func: matchPermissionSubject
+          - func: checkAssetForPerm
+
+  readAudioVideo:
+    and:
+      - rule: isReadAudioVideo
+      - let:
+          # the offering name is the second segment in the bcCallPath:
+          #   /rep/playout/offering/...
+          # /rep is not part of bcCallPath (it's mapped to the "content" bitcode
+          # function)
+          - offeringName:
+              rule: bcCallPath/1
+        rule: offeringPerms
+
+  offeringPerms:
+    # iterate through all permissions
+    any:
+      src:
+        rule: content/permissions
+      var: perm
+      expr:
+        and:
+          - func: matchPermissionSubject
+          - func: checkOfferingForPerm
+
+  # ----------------------------------------------------------------------------
+  # Bitcode rules
+  # ----------------------------------------------------------------------------
+
+  allowOffering:
+    or:
+      - eq:
+          - env: call/bc_call/path
+          - "/playout/options.json"
+      - and:
+          - rule: isSiteContent
+          - rule: readAudioVideo
+
+  # ----------------------------------------------------------------------------
+  # Search post-filter rules
+  # ----------------------------------------------------------------------------
+
+  # Unified search post-filter rule, selecting the correct filter rule based on
+  # the metadata path.
+  filter:
+    switch:
+      - case:
+          eq:
+            - rule: metaPath
+            - fn.data.ToPath: /
+        then:
+          rule: filterContent
+      - case:
+          eq:
+            - rule: metaPath/0
+            - assets
+        then:
+          rule: filterAsset
+      - case:
+          eq:
+            - rule: metaPath/0
+            - offerings
+        then:
+          rule: filterOffering
+
+  filterContent:
+    and:
+      - rule: isSiteContent
+      - func: hasPerms
+
+  filterAsset:
+    rule: checkPermissions
+
+  filterOffering:
+    and:
+      - rule: isSiteContent
+      - eq:
+          - rule: metaPath/0
+          - offerings
+      - let:
+          # the offering name is the second segment in the offering meta:
+          #   /offerings/offering/...
+          - offeringName:
+              rule: metaPath/1
+        rule: offeringPerms
+
+# ------------------------------------------------------------------------------
+
+functions:
+
+  checkAssetForPerm:
+    let:
+      - profile:
+          rule: content/profiles/${perm/profile}
+      - assetOverrides:
+          var: profile/assets/custom_permissions/${assetName}
+          def:
+      - permCriteria:
+          # asset-level restrictions override profile-level restrictions
+          # ==> merge them over the profile data
+          fn.data.Merge:
+            - var: profile
+            - var: assetOverrides
+      - accessPermission:
+          # merge the full-access|no-access permission as above
+          fn.data.Merge:
+            - var: profile/assets/default_permission
+              def:
+            - var: assetOverrides/permission
+              def:
+    and:
+      - fn.checkRestrictions:
+          - rule: now
+          - var: permCriteria
+          - var: accessPermission
+      - fn.checkRestrictions:
+          - rule: now
+          - var: perm
+          - "full-access"
+
+  checkOfferingForPerm:
+    let:
+      - profile:
+          rule: content/profiles/${perm/profile}
+      - offeringOverrides:
+          var: profile/offerings/custom_permissions/${offeringName}
+          def:
+      - permCriteria:
+          # asset-level restrictions override profile-level restrictions
+          # ==> merge them over the profile data
+          fn.data.Merge:
+            - var: profile
+            - var: offeringOverrides
+      - accessPermission:
+          # merge the full-access|no-access permission as above
+          fn.data.Merge:
+            - var: profile/offerings/default_permission
+              def:
+            - var: offeringOverrides/permission
+              def:
+    and:
+      - fn.checkRestrictions:
+          - rule: now
+          - var: permCriteria
+          - var: accessPermission
+      - fn.checkRestrictions:
+          - rule: now
+          - var: perm
+          - "full-access"
+
+  # Checks whether the subject in the permission var:perm matches the call's
+  # subject (user ID) or any of the token's oauth group, OTP id, or fabric group
+  matchPermissionSubject:
+    switch: # find the permission by oauth group, otp id, fabric group or user
+      - case: # oauth group
+          eq:
+            - var: perm/subject/type
+            - oauth_group
+        then:
+          in: # one of the permission's subject is in the user's oauth groups
+            - var: perm/subject/id
+            - env: token/ctx/elv:groups
+      - case: # OTP id
+          eq:
+            - var: perm/subject/type
+            - otp
+        then:
+          in:
+            - var: perm/subject/id
+            - env: token/ctx/elv:otpId
+      - case: # group
+          eq:
+            - var: perm/subject/type
+            - group
+        then:
+          in:
+            - var: perm/subject/id
+            - env: token/ctx/elv:groupIds
+      - case: # user
+          eq:
+            - var: perm/subject/type
+            - user
+        then:
+          or:
+            - eq:
+                - var: perm/subject/id
+                - env: call/subject
+            - eq: # compare perm subject to token subject
+                - var: perm/subject/id
+                - env: token/sub
+            - eq: # backward compatibility: "subject" of old token structure
+                - var: perm/subject/id
+                - env: token/addr
+
+  # checks the restrictions that can be defined for an asset or an offering
+  # param 0: the "current" time
+  # param 1: the restrictions (start, end, ipgeo, etc.)
+  # param 2: full-access|no-access "permission"
+  checkRestrictions:
+    and:
+      # fn.time.In handles missing start date as utc.Min and missing end data as
+      # utx.Max, which is what we want...
+      - fn.time.In:
+          - param: 0 # now
+          - param: 1/start
+            def:
+          - param: 1/end
+            def:
+      - eq:
+          - param: 2 # access permission
+            def: "no-access"
+          - "full-access"
+
+  # hasAssetPerms checks whether the subject has permissions for the qid
+  # in var:content as follows:
+  #   * the subject has a valid permission in the permissions section for "now"
+  #   * and the linked profile has at least one of the following that is valid:
+  #     * assets/default_permission/full-access
+  #     * assets/custom_permissions/*
+  #     * offerings/default_permission/full-access
+  #     * offerings/custom_permissions/*
+  hasPerms:
+    any:
+      src:
+        rule: content/permissions
+      var: perm
+      expr:
+        and:
+          - func: matchPermissionSubject
+          - let:
+              - profile:
+                  rule: content/profiles/${perm/profile}
+            or:
+              # asset permissions
+              - and:
+                  # check whether perm restrictions match
+                  - fn.checkRestrictions:
+                      - rule: now
+                      - var: perm
+                      - "full-access"
+                  - or:
+                      # check profile asset restrictions match
+                      - fn.checkRestrictions:
+                          - rule: now
+                          - var: profile
+                          - var: profile/assets/default_permission
+                      # check whether profile offerings restrictions match
+                      - fn.checkRestrictions:
+                          - rule: now
+                          - var: profile
+                          - var: profile/offerings/default_permission
+              # check whether any custom asset permission match
+              - any:
+                  src:
+                    var: profile/assets/custom_permissions
+                  var: assetName
+                  expr:
+                    func: checkAssetForPerm
+              # check whether any custom offering permission match
+              - any:
+                  src:
+                    var: profile/offerings/custom_permissions
+                  var: offeringName
+                  expr:
+                    func: checkOfferingForPerm

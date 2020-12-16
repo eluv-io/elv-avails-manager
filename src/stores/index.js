@@ -8,6 +8,9 @@ import Trie from "trie-search";
 import {FrameClient} from "@eluvio/elv-client-js/src/FrameClient";
 import ContentStore from "./Content";
 
+import AuthPolicyBody from "../static/auth_policy/AuthPolicy.yaml";
+const AUTH_POLICY_VERSION = "1.14";
+
 // Force strict mode so mutations are only allowed within actions.
 configure({
   enforceActions: "always"
@@ -68,6 +71,10 @@ class RootStore {
     domain: "",
     adminToken: ""
   };
+
+  @observable latestPolicyVersion = AUTH_POLICY_VERSION;
+  @observable currentPolicyVersion;
+  @observable isPolicySigner = true;
 
   @computed get titles() {
     return Object.values(this.allTitles)
@@ -921,55 +928,62 @@ class RootStore {
     this.oauthSettings[key] = value;
   }
 
+  async SetOAuthRequestParams({useStartCursor=false}) {
+    let url = `${this.oauthSettings.domain.trim()}/api/v1/\${API}`;
+    if(useStartCursor) {
+      url = url + "?after=${START}";
+    }
+
+    const writeToken = await this.WriteToken();
+    await this.client.ReplaceMetadata({
+      libraryId: this.libraryId,
+      objectId: this.objectId,
+      writeToken,
+      metadataSubtree: "request_parameters",
+      metadata: {
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "SSWS ${API_KEY}",
+          "Content-Type": "application/json"
+        },
+        method: "GET",
+        url
+      },
+    });
+  }
+
   @action.bound
   async QueryOAuthAPI(path, params={}) {
-    const url = `${this.oauthSettings.domain.trim()}/api/v1/\${API}`;
+    let results = [];
+    let startCursor = undefined;
+    do {
+      await this.SetOAuthRequestParams({useStartCursor: !!startCursor});
 
-    const currentUrl = await this.client.ContentObjectMetadata({
-      libraryId: this.libraryId,
-      objectId: this.objectId,
-      writeToken: this.writeToken,
-      metadataSubtree: "request_parameters/url"
-    });
-
-    if(currentUrl !== url) {
-      const writeToken = await this.WriteToken();
-      await this.client.ReplaceMetadata({
+      let proxyUrl = await this.client.FabricUrl({
         libraryId: this.libraryId,
         objectId: this.objectId,
-        writeToken,
-        metadataSubtree: "request_parameters",
-        metadata: {
-          "headers": {
-            "Accept": "application/json",
-            "Authorization": "SSWS ${API_KEY}",
-            "Content-Type": "application/json"
-          },
-          "method": "GET",
-          "url": `${this.oauthSettings.domain}/api/v1/\${API}`
-        },
+        writeToken: this.writeToken,
+        rep: "proxy",
+        queryParams: {API_KEY: this.oauthSettings.adminToken, API: path, START: startCursor, ...params}
       });
-    }
 
-    if(params) {
-      path = `${path}?${Object.keys(params).map(key => `${key}=${params[key]}`).join("&")}`;
-    }
+      const response = (await (await fetch(proxyUrl)).json());
+      const nextLink = response.headers.Link[1];
 
-    let proxyUrl = await this.client.FabricUrl({
-      libraryId: this.libraryId,
-      objectId: this.objectId,
-      writeToken: this.writeToken,
-      rep: "proxy",
-      queryParams: {API_KEY: this.oauthSettings.adminToken, API: path}
-    });
+      if(nextLink) {
+        startCursor = new URLSearchParams(nextLink.match(/<(.*)>/)[1].split("?")[1]).get("after");
+      } else {
+        startCursor = undefined;
+      }
 
-    const result = JSON.parse(atob((await (await fetch(proxyUrl)).json()).body));
+      if(response.errorCode) {
+        throw Error(response);
+      }
 
-    if(result.errorCode) {
-      throw Error(result);
-    }
+      results = [...results, ...JSON.parse(response.body)];
+    } while(startCursor);
 
-    return result;
+    return results;
   }
 
   @action.bound
@@ -1031,7 +1045,7 @@ class RootStore {
         });
       }
 
-      yield this.Finalize("OAuth Sync");
+      yield this.Finalize("OAuth sync");
 
       this.oauthGroups = groups;
       this.oauthUsers = users;
@@ -1043,6 +1057,25 @@ class RootStore {
       console.error(error);
       this.SetError("Failed to connect to OAuth");
       return false;
+    }
+  });
+
+  @action.bound
+  UpdatePolicy = flow(function * (fromUI) {
+    yield this.client.InitializeAuthPolicy({
+      libraryId: this.libraryId,
+      objectId: this.objectId,
+      writeToken: yield this.WriteToken(),
+      version: AUTH_POLICY_VERSION,
+      body: AuthPolicyBody,
+      description: `Auth policy version ${AUTH_POLICY_VERSION} set by elv-avails-manager`
+    });
+
+    if(fromUI) {
+      yield this.Finalize("Update policy");
+
+      this.SetMessage("Successfully updated policy");
+      this.currentPolicyVersion = AUTH_POLICY_VERSION;
     }
   });
 
@@ -1077,6 +1110,21 @@ class RootStore {
   @action.bound
   Load = flow(function * () {
     const params = {libraryId: this.libraryId, objectId: this.objectId};
+
+    // Policy
+    const authPolicy = yield this.client.ContentObjectMetadata({
+      libraryId: this.libraryId,
+      objectId: this.objectId,
+      metadataSubtree: "auth_policy"
+    });
+
+    if(authPolicy) {
+      this.currentPolicyVersion = authPolicy.version;
+      this.isPolicySigner = this.client.utils.EqualAddress(
+        this.client.utils.HashToAddress(authPolicy.signer),
+        yield this.client.CurrentAccountAddress()
+      );
+    }
 
     // OAuth users and groups and fabric users
     const oauthSyncHash = yield this.client.ContentObjectMetadata({...params, metadataSubtree: "oauth_settings"});
@@ -1398,6 +1446,17 @@ class RootStore {
       });
 
       const writeToken = yield this.WriteToken();
+
+      // Ensure policy is initialized
+      const authPolicy = yield this.client.ContentObjectMetadata({
+        libraryId: this.libraryId,
+        objectId: this.objectId,
+        metadataSubtree: "auth_policy"
+      });
+
+      if(!authPolicy) {
+        yield this.UpdatePolicy();
+      }
 
       yield this.client.ReplaceMetadata({
         libraryId: this.libraryId,

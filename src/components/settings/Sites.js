@@ -57,7 +57,7 @@ class Sites extends React.Component {
 
   render() {
     return (
-      <div className="page-container titles">
+      <div className="page-container">
         { this.state.modal }
         <div className="page-header">
           <h1>Sites</h1>
