@@ -980,7 +980,7 @@ class RootStore {
         throw Error(response);
       }
 
-      results = [...results, ...JSON.parse(response.body)];
+      results = [...results, ...JSON.parse(atob(response.body))];
     } while(startCursor);
 
     return results;
