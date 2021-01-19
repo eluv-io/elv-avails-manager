@@ -34,7 +34,14 @@ class TitlePermissions extends React.Component {
       .sort((addrA, addrB) => titlePermissions[addrA][this.state.sortKey] < titlePermissions[addrB][this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
       .filter(address =>
         !this.state.activeFilter ||
-        (this.props.rootStore.allGroups[address] || this.props.rootStore.allUsers[address]).name.toLowerCase().includes(this.state.activeFilter.toLowerCase())
+        ((
+          this.props.rootStore.allGroups[address] ||
+          this.props.rootStore.allUsers[address] ||
+          this.props.rootStore.allNTPInstances[address] ||
+          {}
+        ).name || address)
+          .toLowerCase()
+          .includes(this.state.activeFilter.toLowerCase())
       );
 
     return (
