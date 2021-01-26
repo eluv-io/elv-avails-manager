@@ -124,6 +124,13 @@ class RootStore {
     window.rootStore = this;
   }
 
+  LogError(message, error) {
+    // eslint-disable-next-line no-console
+    if(message) { console.error(message); }
+    // eslint-disable-next-line no-console
+    if(error) { console.debug(error); }
+  }
+
   @action.bound
   SetTimezone(zone) {
     Settings.defaultZoneName = zone;
@@ -551,27 +558,29 @@ class RootStore {
     name = (name || "").trim();
 
     try {
-      if(type === "fabricUser") {
-        address = this.client.utils.FormatAddress(address);
+      if(!this.allUsers[address]) {
+        if(type === "fabricUser") {
+          address = this.client.utils.FormatAddress(address);
 
-        this.allUsers[address] = {
-          type,
-          name: name || address,
-          address
-        };
-      } else {
-        this.allUsers[address] = this.OAuthUserInfo(address);
+          this.allUsers[address] = {
+            type,
+            name: name || address,
+            address
+          };
+        } else {
+          this.allUsers[address] = this.OAuthUserInfo(address);
+        }
       }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Failed to load user:", address);
-      // eslint-disable-next-line no-console
-      console.error(error);
 
-      this.allusers[address] = {
+      return this.allUsers[address];
+    } catch (error) {
+      this.LogError(`Failed to load user: ${address}`, error);
+
+      this.allUsers[address] = {
         type,
         address,
-        name: name || address,
+        name: `${(name || address).trim()} (Removed)`,
+        originalName: name,
         description: ""
       };
     }
@@ -582,20 +591,23 @@ class RootStore {
     address = address.trim();
 
     try {
-      if(type === "fabricGroup") {
-        this.allGroups[address] = yield this.GroupInfo(address);
-      } else {
-        this.allGroups[address] = this.OAuthGroupInfo(address);
+      if(!this.allGroups[address]) {
+        if(type === "fabricGroup") {
+          this.allGroups[address] = yield this.GroupInfo(address);
+        } else {
+          this.allGroups[address] = this.OAuthGroupInfo(address);
+        }
       }
+
+      return this.allGroups[address];
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Failed to load group:", address);
-      // eslint-disable-next-line no-console
-      console.error(error);
+      this.LogError(`Failed to load group: ${address}`, error);
+
       this.allGroups[address] = {
         type,
         address,
-        name: (name || address).trim(),
+        name: `${(name || address).trim()} (Removed)`,
+        originalName: name,
         description: ""
       };
     }
@@ -604,24 +616,25 @@ class RootStore {
   @action.bound
   LoadNTPInstance = flow(function * ({ntpId, name, tickets}) {
     try {
-      ntpId = ntpId.trim();
-      name = (name || (this.allNTPInstances[ntpId] || {}).name || "").trim();
+      if(!this.allNTPInstances[ntpId]) {
+        ntpId = ntpId.trim();
+        name = (name || (this.allNTPInstances[ntpId] || {}).name || "").trim();
 
-      const ntpInfo = yield this.client.NTPInstance({tenantId: this.tenantId, ntpId});
+        const ntpInfo = yield this.client.NTPInstance({tenantId: this.tenantId, ntpId});
 
-      this.allNTPInstances[ntpId] = {
-        ...ntpInfo,
-        tickets: tickets || (this.allNTPInstances[ntpId] || {}).tickets || [],
-        name: name.trim(),
-        ntpId,
-        address: ntpId,
-        type: "ntpInstance",
-      };
+        this.allNTPInstances[ntpId] = {
+          ...ntpInfo,
+          tickets: tickets || (this.allNTPInstances[ntpId] || {}).tickets || [],
+          name: name.trim(),
+          ntpId,
+          address: ntpId,
+          type: "ntpInstance",
+        };
+      }
+
+      return this.allNTPInstances[ntpId];
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Failed to load NTP Instance:", ntpId);
-      // eslint-disable-next-line no-console
-      console.error(error);
+      this.LogError(`Failed to load NTP Instance: ${ntpId}`, error);
     }
   });
 
@@ -708,7 +721,7 @@ class RootStore {
           });
         } catch (error) {
           // eslint-disable-next-line no-console
-          console.error(error);
+          this.LogError(`Failed to issue ticket for ${email}`, error);
 
           failures.push({
             email,
@@ -892,10 +905,7 @@ class RootStore {
       try {
         this.oauthSettings.domain = URI(oktaParameters.url).origin();
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error("Failed to parse oauth domain");
-        // eslint-disable-next-line no-console
-        console.error(error);
+        this.LogError(`Failed to parse OAuth domain: ${oktaParameters.url}`, error);
       }
     }
 
@@ -1053,8 +1063,7 @@ class RootStore {
       this.SetMessage("Successfully synced with OAuth");
       return true;
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(error);
+      this.LogError("Failed to connect to OAuth", error);
       this.SetError("Failed to connect to OAuth");
       return false;
     }
@@ -1326,10 +1335,7 @@ class RootStore {
               const id = ((loadedPermissions || {}).subject || {}).id || "";
 
               this.SetError(`Failed to load permission on ${titleId} for ${type} ${id}`);
-              // eslint-disable-next-line no-console
-              console.error(`Failed to load permission on ${titleId} for ${type} ${id}`);
-              // eslint-disable-next-line no-console
-              console.error(error);
+              this.LogError(`Failed to load permission on ${titleId} for ${type} ${id}`, error);
             }
           })
         );
@@ -1414,8 +1420,13 @@ class RootStore {
               type: "group"
             };
           } else if(type === "oauthGroup") {
+            const groupInfo = this.allGroups[id];
+            if(!groupInfo) {
+              this.LogError(`Unable to find OAuth group info for ${id}`);
+            }
+
             itemPermission.subject = {
-              id: this.OAuthGroupInfo(id).name,
+              id: groupInfo.originalName || groupInfo.name,
               oauth_id: id,
               type: "oauth_group"
             };
@@ -1426,8 +1437,13 @@ class RootStore {
               type: "user"
             };
           } else if(type === "oauthUser") {
+            const userInfo = this.allUsers[id];
+            if(!userInfo) {
+              this.LogError(`Unable to find OAuth user info for ${id}`);
+            }
+
             itemPermission.subject = {
-              id: this.OAuthUserInfo(id).name,
+              id: userInfo.originalName || userInfo.name,
               oauth_id: id,
               type: "oauth_user"
             };

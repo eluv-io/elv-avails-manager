@@ -44,7 +44,7 @@ class GroupBrowser extends React.Component {
       }
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error(error);
+      this.props.rootStore.LogError("Failed to load groups", error);
     } finally {
       this.setState({loading: false});
     }

@@ -170,10 +170,7 @@ class AppFrame extends React.Component {
         "*"
       );
     } catch (error) {
-      /* eslint-disable no-console */
-      console.error(responseMessage);
-      console.error(error);
-      /* eslint-enable no-console */
+      this.LogError(responseMessage, error);
     }
   }
 

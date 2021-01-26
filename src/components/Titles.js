@@ -257,8 +257,8 @@ class Titles extends React.Component {
             this.props.rootStore.RemoveTitlePermission(this.Target().address, objectId);
           }
 
-          // eslint-disable-next-line no-console
-          console.error(error);
+          this.props.rootStore.LogError("Failed to add title permissions", error);
+
           throw error;
         }
       })

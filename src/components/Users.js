@@ -35,7 +35,7 @@ class UsersBrowser extends React.Component {
       });
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error(error);
+      this.props.rootStore.LogError("Failed to load OAuth users", error);
     } finally {
       this.setState({loading: false});
     }

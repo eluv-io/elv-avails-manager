@@ -90,8 +90,7 @@ class NTPForms extends React.Component {
             await this.props.onComplete(ntpId, this.state.name);
           } catch (error) {
             this.setState({error: "Failed to create NTP Instance"});
-            // eslint-disable-next-line no-console
-            console.error(error);
+            this.props.rootStore.LogError("Failed to create NTP Instance", error);
           } finally {
             this.setState({loading: false});
           }
@@ -224,8 +223,7 @@ class NTPForms extends React.Component {
             await this.props.onComplete(this.props.ntpId, this.state.name);
           } catch (error) {
             this.setState({error: "Failed to update NTP Instance"});
-            // eslint-disable-next-line no-console
-            console.error(error);
+            this.props.rootStore.LogError("Failed to update NTP Instance", error);
           } finally {
             this.setState({loading: false});
           }
@@ -299,10 +297,7 @@ class NTPForms extends React.Component {
           } catch (error) {
             this.setState({error: "Invalid NTP", loading: false});
 
-            // eslint-disable-next-line no-console
-            console.error(`Failed to load NTP ${this.state.ntpId}:`);
-            // eslint-disable-next-line no-console
-            console.error(error);
+            this.props.rootStore.LogError(`Failed to load NTP Instance ${this.state.ntpId}`, error);
           }
         }}
       >
@@ -401,10 +396,7 @@ class NTPForms extends React.Component {
           } catch (error) {
             this.setState({error: error.message || error, loading: false});
 
-            // eslint-disable-next-line no-console
-            console.error(`Failed to issue ticket for ${this.state.ntpId}:`);
-            // eslint-disable-next-line no-console
-            console.error(error);
+            this.props.rootStore.LogError(`Failed to issue ticket for ${this.state.ntpId}`, error);
           }
         }}
       >
