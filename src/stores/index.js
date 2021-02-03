@@ -38,23 +38,6 @@ class RootStore {
 
   @observable policySettings = { require_perm_for_public_area: true };
 
-  // Profile permissions
-  @observable titleProfiles = {};
-
-  // User/Group permissions
-  @observable titlePermissions = {};
-
-  @observable titleOptions = {};
-
-  // Things with permissions
-  @observable allTitles = {};
-
-  @observable allNTPInstances = {};
-
-  @observable allGroups = {};
-  @observable allUsers = {};
-  @observable allOAuthGroups = {};
-
   @observable userList = [];
   @observable totalUsers = 0;
 
@@ -65,8 +48,6 @@ class RootStore {
   @observable oauthGroups;
   @observable oauthUsers;
 
-  @observable totalGroups = 0;
-
   @observable oauthSettings = {
     domain: "",
     adminToken: ""
@@ -75,6 +56,8 @@ class RootStore {
   @observable latestPolicyVersion = AUTH_POLICY_VERSION;
   @observable currentPolicyVersion;
   @observable isPolicySigner = true;
+
+  @observable versionKey = 0;
 
   @computed get titles() {
     return Object.values(this.allTitles)
@@ -121,7 +104,38 @@ class RootStore {
   constructor() {
     this.contentStore = new ContentStore(this);
 
+    // Profiles
+    this.titleProfiles = {};
+
+    // Permissions
+    this.titlePermissions = {};
+
+    // Title info
+    this.allTitles = {};
+
+    // Title options (e.g. active/inactive)
+    this.titleOptions = {};
+
+    // User/group/NTP info
+    this.allNTPInstances = {};
+    this.allGroups = {};
+    this.allOAuthGroups = {};
+    this.allUsers = {};
+    this.allOAuthUsers = {};
+
     window.rootStore = this;
+  }
+
+  // Update the react element key of the <main> tag in the app to force re-rendering on update
+  IncrementVersionKey() {
+    clearTimeout(this.versionUpdate);
+
+    // Debounce to prevent excessive updates
+    this.versionUpdate = setTimeout(() => {
+      runInAction(() => {
+        this.versionKey = this.versionKey + 1;
+      });
+    }, 500);
   }
 
   LogError(message, error) {
@@ -209,11 +223,15 @@ class RootStore {
       objectId,
       name
     });
+
+    this.IncrementVersionKey();
   });
 
   @action.bound
   RemoveSite(objectId) {
     this.sites = this.sites.filter(site => site.objectId !== objectId);
+
+    this.IncrementVersionKey();
   }
 
   DefaultProfiles() {
@@ -311,6 +329,8 @@ class RootStore {
     delete this.titlePermissions[objectId];
     delete this.titleProfiles[objectId];
     delete this.titleOptions[objectId];
+
+    this.IncrementVersionKey();
   }
 
   @action.bound
@@ -431,6 +451,8 @@ class RootStore {
   @action.bound
   UpdateTitleOption(titleId, key, value) {
     this.titleOptions[titleId][key] = value;
+
+    this.IncrementVersionKey();
   }
 
   @action.bound
@@ -445,6 +467,8 @@ class RootStore {
       assetPermissions: [],
       offeringPermissions: []
     };
+
+    this.IncrementVersionKey();
   }
 
   @action.bound
@@ -456,6 +480,8 @@ class RootStore {
         delete this.titlePermissions[objectId][address];
       }
     });
+
+    this.IncrementVersionKey();
   }
 
   @action.bound
@@ -839,6 +865,8 @@ class RootStore {
     Object.keys(this.titlePermissions).forEach(objectId =>
       this.RemoveTitlePermission(objectId, address)
     );
+
+    this.IncrementVersionKey();
   }
 
   @action.bound
@@ -861,6 +889,8 @@ class RootStore {
         endTime: undefined
       };
     }
+
+    this.IncrementVersionKey();
   }
 
   @action.bound
@@ -868,6 +898,8 @@ class RootStore {
     if(this.titlePermissions[objectId]) {
       delete this.titlePermissions[objectId][address];
     }
+
+    this.IncrementVersionKey();
   }
 
   // Misc
@@ -1061,6 +1093,7 @@ class RootStore {
       this.oauthUsers = users;
 
       this.SetMessage("Successfully synced with OAuth");
+
       return true;
     } catch (error) {
       this.LogError("Failed to connect to OAuth", error);

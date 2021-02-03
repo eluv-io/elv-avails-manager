@@ -100,7 +100,7 @@ class App extends React.Component {
           <NavLink to="/ntps" className="-elv-tab" activeClassName="selected">Tickets</NavLink>
           <NavLink to="/settings" className="-elv-tab" activeClassName="selected">Settings</NavLink>
         </nav>
-        <main>
+        <main className={`app-version-${this.props.rootStore.versionKey}`}>
           <Switch>
             <Route exact path="/settings" component={Settings} />
 

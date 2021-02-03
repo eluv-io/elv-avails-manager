@@ -142,7 +142,7 @@ class Titles extends React.Component {
     const titles = (!this.state.activeFilter ?
       this.props.rootStore.titles :
       this.props.rootStore.titlesTrie.get(this.state.activeFilter).map(result => result.value))
-      .map(title => ({...title, active: this.props.rootStore.titleOptions[title.objectId].active}));
+      .map(title => ({...title, active: (this.props.rootStore.titleOptions[title.objectId] || {}).active}));
 
     return (
       <React.Fragment>
@@ -219,6 +219,7 @@ class Titles extends React.Component {
 
     return (
       <AsyncComponent
+        key={`titles-page-${this.props.rootStore.versionKey}`}
         Load={async () => {
           if(this.props.match.params.groupAddress && !this.Group()){
             await this.props.rootStore.LoadGroup(this.props.match.params.groupAddress, this.props.match.params.groupType);
@@ -265,6 +266,8 @@ class Titles extends React.Component {
     );
 
     if(addError) { throw addError; }
+
+    this.props.rootStore.IncrementVersionKey();
 
     this.CloseModal();
   }
