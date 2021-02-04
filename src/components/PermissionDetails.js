@@ -1,5 +1,5 @@
 import React from "react";
-import {BackButton, EffectiveAvailability} from "./Misc";
+import {BackButton, EffectiveAvailability, JoinNTPSubject, SplitNTPSubject} from "./Misc";
 import Path from "path";
 import {inject, observer} from "mobx-react";
 import {FormatName, ImageIcon, LabelledField, ToolTip} from "elv-components-js";
@@ -16,15 +16,26 @@ class PermissionDetails extends React.Component {
   }
 
   TargetId() {
+    if(this.props.match.params.subjectId) {
+      // NTP Subject
+      return JoinNTPSubject(this.props.match.params.ntpId, this.props.match.params.subjectId);
+    }
+
     return (
       this.props.match.params.userAddress ||
       this.props.match.params.groupAddress ||
       this.props.match.params.ntpId ||
-      this.props.match.params.subjectId
+      this.props.match.params.targetId
     );
   }
 
   Target() {
+    const {ntpId, subjectId} = SplitNTPSubject(this.TargetId());
+
+    if((ntpId && subjectId) || this.props.match.params.subjectId) {
+      return (this.props.rootStore.allNTPSubjects[ntpId || this.props.match.params.ntpId] || {})[this.TargetId()];
+    }
+
     const targetId = this.TargetId();
     return (
       this.props.rootStore.allUsers[targetId] ||

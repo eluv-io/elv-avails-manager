@@ -42,18 +42,22 @@ a {
     opacity: 1;
   }
 
-
   100% {
     opacity: 0;
   }
 }
 
 .message {
+  align-items: center;
   animation: FadeOut 5s linear forwards;
   color: $elv-color-mediumblue;
+  display: flex;
+  height: 2.5rem;
+  margin: $elv-spacing-xs 0;
+  padding: 0 $elv-spacing-xs;
 
-  &:not(:empty) {
-    margin: $elv-spacing-xs 0;
+  &:empty {
+    visibility: hidden;
   }
 }
 
@@ -373,8 +377,8 @@ button {
   .-elv-modal-content {
     height: 90vh;
     max-width: 75vw;
-    min-height: 95vh;
-    min-width: 60vw;
+    min-height: 90vh;
+    min-width: 50vw;
 
     .-elv-async-component-loading {
       height: 80%;
@@ -386,15 +390,16 @@ button {
 .shrink-modal {
   .-elv-modal-content {
     height: auto;
-    max-width: unset;
-    min-height: unset;
-    min-width: unset;
+    min-height: 0;
+    min-width: 0;
+    width: auto;
   }
 }
 
 .user-browser,
 .group-browser,
-.ntp-browser {
+.ntp-subjects-page {
+  min-width: 60vw;
   padding-bottom: 1rem;
 
   h1 {
@@ -444,16 +449,16 @@ button {
 form {
   max-width: 500px;
 
+  .message {
+    &:empty {
+      display: none;
+    }
+  }
+
   .error-message {
     animation: none;
     background-color: $elv-color-mediumred;
     color: $elv-color-text-white;
-    margin: 0;
-    padding: $elv-spacing-xs;
-
-    &:empty {
-      display: none;
-    }
   }
 
   legend {
@@ -491,7 +496,9 @@ form {
   }
 
   h1 {
+    align-items: flex-start;
     margin-bottom: $elv-spacing-l;
+    min-height: 2.5rem;
   }
 
   input {
@@ -520,12 +527,14 @@ form {
 }
 
 .ntp-badge {
+  @include elv-no-select;
+
   background-color: $elv-color-mediumgreen;
   border-radius: $elv-spacing-xxs;
   color: $elv-color-white;
   font-size: $elv-font-m;
   margin: 0 $elv-spacing-s;
-  padding: $elv-spacing-xxs $elv-spacing-s;
+  padding: $elv-spacing-xxs $elv-spacing-xs;
 
   &.expired {
     background-color: $elv-color-mediumred;
@@ -551,11 +560,13 @@ form {
 .fabric-user-form {
   h1 {
     margin-bottom: 0;
-
   }
 
   .message {
-    height: 2rem;
+    align-items: center;
+    display: flex;
+    height: 2.5rem;
+    padding: 0 $elv-spacing-xs;
   }
 }
 

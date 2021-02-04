@@ -15,7 +15,10 @@ import {
   BackButton,
   DeleteButton,
   EffectiveAvailability,
-  InitPSF, NTPBadge, PermissionDetailsButton
+  InitPSF,
+  JoinNTPSubject,
+  NTPBadge,
+  PermissionDetailsButton
 } from "./Misc";
 import Path from "path";
 import AsyncComponent from "./AsyncComponent";
@@ -60,8 +63,16 @@ class Titles extends React.Component {
     return this.props.rootStore.allNTPInstances[this.props.match.params.ntpId];
   }
 
+  NTPSubject() {
+    if(!this.props.match.params.subjectId) { return; }
+
+    const subjectAddress = JoinNTPSubject(this.props.match.params.ntpId, this.props.match.params.subjectId);
+
+    return this.props.rootStore.allNTPSubjects[this.props.match.params.ntpId][subjectAddress];
+  }
+
   Target() {
-    return this.Group() || this.User() || this.NTP();
+    return this.Group() || this.User() || this.NTPSubject() || this.NTP();
   }
 
   TargetPermissions() {
@@ -188,20 +199,33 @@ class Titles extends React.Component {
   }
 
   Content() {
+    const isNTPInstance = this.NTP() && !this.NTPSubject();
+
+    let header = this.Target() ? `${this.Target().name} | Title Permissions` : "All Titles";
+    if(this.NTPSubject()) {
+      header = `${this.NTP().name} | ${this.Target().name} | Title Permissions`;
+    }
+
     return (
       <div className="page-container titles">
         { this.state.modal }
         <div className="page-header">
           { this.Target() ? <BackButton to={Path.dirname(this.props.location.pathname)} /> : null }
-          <h1>{ this.Target() ? `${this.Target().name} | Title Permissions` : "All Titles"} {this.NTP() ? NTPBadge(this.NTP()): null}</h1>
+          <h1>{ header } { isNTPInstance ? NTPBadge(this.NTP()) : null }</h1>
         </div>
 
         <div className="controls">
           <Action onClick={this.ActivateModal}>Add Titles</Action>
           {
             Maybe(
-              this.NTP(),
+              isNTPInstance,
               <Action className="secondary" type="link" to={UrlJoin(this.props.location.pathname, "manage")}>Manage NTP Instance</Action>
+            )
+          }
+          {
+            Maybe(
+              isNTPInstance,
+              <Action className="secondary" type="link" to={UrlJoin(this.props.location.pathname, "subjects")}>NTP Subject Permissions</Action>
             )
           }
           { this.Filter("Filter Titles...") }

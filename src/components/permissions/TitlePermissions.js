@@ -38,6 +38,7 @@ class TitlePermissions extends React.Component {
           this.props.rootStore.allGroups[address] ||
           this.props.rootStore.allUsers[address] ||
           this.props.rootStore.allNTPInstances[address] ||
+          this.props.rootStore.NTPSubject(address) ||
           {}
         ).name || address)
           .toLowerCase()
@@ -50,6 +51,7 @@ class TitlePermissions extends React.Component {
           <Action onClick={() => this.ActivateModal("user")}>Add User Permission</Action>
           <Action onClick={() => this.ActivateModal("group")}>Add Group Permission</Action>
           <Action onClick={() => this.ActivateModal("ntp")}>Add NTP Permission</Action>
+          <Action onClick={() => this.ActivateModal("ntpSubject")}>Add NTP Subject Permission</Action>
           { this.Filter("Filter Permissions") }
         </div>
         { this.PageControls(titlePermissionAddresses.length) }
@@ -69,7 +71,8 @@ class TitlePermissions extends React.Component {
                 const target =
                   this.props.rootStore.allGroups[address] ||
                   this.props.rootStore.allUsers[address] ||
-                  this.props.rootStore.allNTPInstances[address];
+                  this.props.rootStore.allNTPInstances[address] ||
+                  this.props.rootStore.NTPSubject(address);
 
                 if(!target) { return; }
 
@@ -83,19 +86,24 @@ class TitlePermissions extends React.Component {
 
                 if(!profile) { return null; }
 
+                let displayName = target.name;
                 let linkPath;
                 if(target.type === "fabricGroup" || target.type === "oauthGroup") {
                   linkPath = UrlJoin("/groups", target.address);
                 } else if(target.type === "fabricUser" || target.type === "oauthUser") {
                   linkPath = UrlJoin("/users", target.address);
-                } else {
+                } else if(target.type === "ntpInstance") {
                   linkPath = UrlJoin("/ntps", target.address);
+                } else if(target.type === "ntpSubject") {
+                  linkPath = UrlJoin("/ntps", target.ntpId, "subjects", target.address);
+                  const ntpInstance = this.props.rootStore.allNTPInstances[target.ntpId] || {};
+                  displayName = `${ntpInstance.name || target.ntpId} | ${target.name}`;
                 }
 
                 return (
                   <div
                     className={`list-entry title-permission-list-entry ${index % 2 === 0 ? "even" : "odd"}`}
-                    key={`title-permission-${JSON.stringify(permissions)}`}
+                    key={`title-permission-${target.address}`}
                   >
                     <div title={target.name} className="small-font">
                       <ToolTip content={`Go to ${target.name}`}>
@@ -103,7 +111,7 @@ class TitlePermissions extends React.Component {
                           <ImageIcon icon={LinkIcon} />
                         </Link>
                       </ToolTip>
-                      { target.name }
+                      { displayName }
                     </div>
                     <div>
                       <select
@@ -165,6 +173,9 @@ class TitlePermissions extends React.Component {
         break;
       case "ntp":
         selection = <NTPInstances selectable onSelect={this.AddPermission}/>;
+        break;
+      case "ntpSubject":
+        selection = <NTPInstances selectable selectSubject onSelect={this.AddPermission}/>;
     }
 
     this.setState({

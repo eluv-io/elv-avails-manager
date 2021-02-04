@@ -8,6 +8,7 @@ import {Action, Modal} from "elv-components-js";
 import {DeleteButton, FormatDate, InitPSF, NTPBadge} from "./Misc";
 
 import NTPForms from "./NTPForms";
+import NTPSubjects from "./NTPSubjects";
 
 
 @inject("rootStore")
@@ -25,6 +26,10 @@ class NTPInstances extends React.Component {
   }
 
   render() {
+    if(this.state.selectedNTPInstance) {
+      return <NTPSubjects selectable ntpId={this.state.selectedNTPInstance} onSelect={this.props.onSelect} />;
+    }
+
     const ntpInstances = Object.values(this.props.rootStore.allNTPInstances)
       .filter(({ntpId, name}) => !this.state.activeFilter ||
         (name || "").toLowerCase().includes(this.state.activeFilter.toLowerCase()) ||
@@ -73,7 +78,13 @@ class NTPInstances extends React.Component {
                   <div
                     key={`ntp-instances-${ntpId}`}
                     className={`list-entry list-entry-selectable ntp-instance-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
-                    onClick={() => this.props.onSelect(ntpId, name)}
+                    onClick={() => {
+                      if(this.props.selectSubject) {
+                        this.setState({selectedNTPInstance: ntpId});
+                      } else {
+                        this.props.onSelect(ntpId, name);
+                      }
+                    }}
                   >
                     { contents }
                   </div>
@@ -125,7 +136,7 @@ class NTPInstances extends React.Component {
         <Modal
           closable
           OnClickOutside={this.CloseModal}
-          className={`asset-form-modal ${create ? "fullscreen-modal" : "shrink-modal"}`}
+          className={"asset-form-modal shrink-modal"}
         >
           <NTPForms
             create={create}
@@ -144,6 +155,7 @@ class NTPInstances extends React.Component {
 
 NTPInstances.propTypes = {
   selectable: PropTypes.bool,
+  selectSubject: PropTypes.bool,
   onSelect: PropTypes.func
 };
 

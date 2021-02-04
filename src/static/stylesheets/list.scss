@@ -29,7 +29,6 @@ $font-size: 0.9rem;
   }
 
   & > div {
-    @include elv-ellipsis;
     align-items: center;
     border: 1px solid $elv-color-lightgray;
     border-bottom: 0;
@@ -234,6 +233,14 @@ $font-size: 0.9rem;
 
   &.list-entry-selectable {
     grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  }
+}
+
+.ntp-subject-list-entry {
+  grid-template-columns: 2fr 1fr 1fr 1fr 6rem;
+
+  &.list-entry-selectable {
+    grid-template-columns: 2fr 1fr 1fr 1fr;
   }
 }
 

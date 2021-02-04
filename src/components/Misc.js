@@ -229,3 +229,12 @@ export const DateFieldAlert = (message) => {
     </ToolTip>
   );
 };
+
+// NTP Subjects may not be unique by their ID, so they need to include their NTP ID as well
+export const JoinNTPSubject = (ntpId, subjectId) => `${ntpId}||||${subjectId}`;
+
+export const SplitNTPSubject = subject => {
+  const [ntpId, subjectId] = subject.split("||||");
+
+  return {ntpId, subjectId};
+};

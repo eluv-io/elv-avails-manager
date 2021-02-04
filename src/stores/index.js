@@ -9,6 +9,7 @@ import {FrameClient} from "@eluvio/elv-client-js/src/FrameClient";
 import ContentStore from "./Content";
 
 import AuthPolicyBody from "../static/auth_policy/AuthPolicy.yaml";
+import {JoinNTPSubject, SplitNTPSubject} from "../components/Misc";
 const AUTH_POLICY_VERSION = "1.14";
 
 // Force strict mode so mutations are only allowed within actions.
@@ -101,6 +102,14 @@ class RootStore {
     }));
   }
 
+  NTPSubject(address) {
+    const {ntpId, subjectId} = SplitNTPSubject(address);
+
+    if(!subjectId || !ntpId) { return; }
+
+    return (this.allNTPSubjects[ntpId] || {})[address];
+  }
+
   constructor() {
     this.contentStore = new ContentStore(this);
 
@@ -118,6 +127,7 @@ class RootStore {
 
     // User/group/NTP info
     this.allNTPInstances = {};
+    this.allNTPSubjects = {};
     this.allGroups = {};
     this.allOAuthGroups = {};
     this.allUsers = {};
@@ -163,6 +173,8 @@ class RootStore {
         return "OAuth Group";
       case "ntpInstance":
         return "NTP Instance";
+      case "ntpSubject":
+        return "NTP Subject";
       default:
         return "Unknown type";
     }
@@ -640,9 +652,33 @@ class RootStore {
   });
 
   @action.bound
+  LoadNTPSubject({subjectId, ntpId, joinedSubject}) {
+    if(joinedSubject) {
+      const components = SplitNTPSubject(joinedSubject);
+      ntpId = components.ntpId;
+      subjectId = components.subjectId;
+    } else {
+      joinedSubject = JoinNTPSubject(ntpId, subjectId);
+    }
+
+    if(!this.allNTPSubjects[ntpId]) {
+      this.allNTPSubjects[ntpId] = {};
+    }
+
+    if(!this.allNTPSubjects[ntpId][joinedSubject]) {
+      this.allNTPSubjects[ntpId][joinedSubject] = {
+        name: subjectId,
+        ntpId,
+        address: joinedSubject,
+        type: "ntpSubject"
+      };
+    }
+  }
+
+  @action.bound
   LoadNTPInstance = flow(function * ({ntpId, name, tickets}) {
     try {
-      if(!this.allNTPInstances[ntpId]) {
+      if(!this.allNTPInstances[ntpId] || (name && !this.allNTPInstances[ntpId].name)) {
         ntpId = ntpId.trim();
         name = (name || (this.allNTPInstances[ntpId] || {}).name || "").trim();
 
@@ -656,6 +692,10 @@ class RootStore {
           address: ntpId,
           type: "ntpInstance",
         };
+      }
+
+      if(!this.allNTPSubjects[ntpId]) {
+        this.allNTPSubjects[ntpId] = {};
       }
 
       return this.allNTPInstances[ntpId];
@@ -848,18 +888,28 @@ class RootStore {
     const startIndex = (page - 1) * perPage;
 
     const groups = Object.values(this.oauthGroups)
-      .filter(group => !filter || group.name.toLowerCase().includes(filter.toLowerCase()) || group.address.includes(filter.toLowerCase()));
+      .filter(({name, description}) =>
+        !filter ||
+        (
+          (name || "").toLowerCase().includes(filter.toLowerCase()) ||
+          (description || "").toLowerCase().includes(filter.toLowerCase())
+        )
+      );
 
     this.totalGroups = groups.length;
     this.groupList = groups.slice(startIndex, startIndex + perPage);
   }
 
   @action.bound
-  RemoveTarget(address) {
-    delete this.allUsers[address];
-    delete this.allGroups[address];
-    delete this.allOAuthGroups[address];
-    delete this.allNTPInstances[address];
+  RemoveTarget(address, ntpId) {
+    if(ntpId && this.allNTPSubjects[ntpId]) {
+      delete this.allNTPSubjects[ntpId][address];
+    } else {
+      delete this.allUsers[address];
+      delete this.allGroups[address];
+      delete this.allOAuthGroups[address];
+      delete this.allNTPInstances[address];
+    }
 
     // Iterate through title permissions
     Object.keys(this.titlePermissions).forEach(objectId =>
@@ -1331,8 +1381,10 @@ class RootStore {
           (authSpec[titleId].permissions || []).map(async loadedPermissions => {
             try {
               const profile = loadedPermissions.profile;
+
               let type = loadedPermissions.subject.type;
               let id = loadedPermissions.subject.oauth_id || loadedPermissions.subject.id;
+              let ntpId;
               if(type === "group") {
                 type = "fabricGroup";
                 id = this.client.utils.HashToAddress(id);
@@ -1348,8 +1400,16 @@ class RootStore {
               } else if(type === "oauth_user") {
                 type = "oauthUser";
                 this.LoadUser(id, type, loadedPermissions.subject.id);
-              } else if(type === "ntp") {
-                await this.LoadNTPInstance(id);
+              } else if(type === "ntp" || type === "otp") {
+                type = "ntpInstance";
+                await this.LoadNTPInstance({ntpId: id});
+              } else if(type === "ntp_subject" || type === "otp_subject") {
+                type = "ntpSubject";
+                ntpId = loadedPermissions.subject.otp_id;
+
+                await this.LoadNTPSubject({subjectId: id, ntpId});
+
+                id = JoinNTPSubject(ntpId, id);
               }
 
               this.titlePermissions[titleId][id] = {
@@ -1480,10 +1540,17 @@ class RootStore {
               oauth_id: id,
               type: "oauth_user"
             };
-          } else {
+          } else if(type === "ntpInstance") {
             itemPermission.subject = {
-              id: id,
+              id,
               type: "otp"
+            };
+          } else if(type === "ntpSubject") {
+            const {subjectId, ntpId} = SplitNTPSubject(id);
+            itemPermission.subject = {
+              id: subjectId,
+              otp_id: ntpId,
+              type: "otp_subject"
             };
           }
 

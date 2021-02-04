@@ -6,6 +6,7 @@ import {BackButton, FormatDate, InitPSF, NTPBadge} from "./Misc";
 
 import NTPForms from "./NTPForms";
 import Path from "path";
+
 @inject("rootStore")
 @observer
 class NTPInstance extends React.Component {
@@ -64,7 +65,7 @@ class NTPInstance extends React.Component {
         <div className="list">
           <div className="list-entry list-header ntp-tickets-list-entry">
             { this.SortableHeader("token", "Ticket") }
-            { this.SortableHeader("user_id", "User ID") }
+            { this.SortableHeader("user_id", "Subject ID") }
             { this.SortableHeader("issued_at", "Issued") }
           </div>
           {

@@ -96,7 +96,7 @@ class NTPForms extends React.Component {
           }
         }}
       >
-        <legend>Create New NTP Instance</legend>
+        <h1>Create New NTP Instance</h1>
         <div key={`error-${this.state.error}-${Math.random()}`} className="message error-message">{ this.state.error }</div>
         <LabelledField label="Name">
           <input
@@ -229,7 +229,7 @@ class NTPForms extends React.Component {
           }
         }}
       >
-        <legend>Edit NTP Instance</legend>
+        <h1>Edit NTP Instance</h1>
         <div key={`error-${this.state.error}-${Math.random()}`} className="message error-message">{ this.state.error }</div>
         <LabelledField label="Name">
           <input
@@ -301,7 +301,7 @@ class NTPForms extends React.Component {
           }
         }}
       >
-        <legend>Add Existing NTP Instance</legend>
+        <h1>Add Existing NTP Instance</h1>
         <div key={`error-${this.state.error}-${Math.random()}`} className="message error-message">{ this.state.error }</div>
         <LabelledField label="Name">
           <input
@@ -354,7 +354,7 @@ class NTPForms extends React.Component {
 
       return (
         <form className="ntp-instance-form">
-          <legend>Issue Tickets for {this.NTP().name}</legend>
+          <h1>Issue Tickets For '{this.NTP().name}'</h1>
 
           <pre>
             { failures }
@@ -400,7 +400,7 @@ class NTPForms extends React.Component {
           }
         }}
       >
-        <legend>Issue Ticket for {this.NTP().name}</legend>
+        <h1>Issue Tickets For '{this.NTP().name}'</h1>
         <div key={`error-${this.state.error}-${Math.random()}`} className="message error-message">{ this.state.error }</div>
 
         { this.state.ticketsTotal ?

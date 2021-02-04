@@ -58,7 +58,9 @@ class UsersBrowser extends React.Component {
         }}
       >
         <h1>Add Fabric User</h1>
-        <div key={`error-${this.state.error}-${Math.random()}`} className="message error-message">{ this.state.error } </div>
+        <div key={`error-${this.state.error}-${Math.random()}`} className="message error-message">
+          { this.state.error ? this.state.error : undefined }
+        </div>
         <LabelledField label="Name">
           <input
             required

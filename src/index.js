@@ -23,6 +23,7 @@ import Settings from "./components/settings/Settings";
 import NTPInstances from "./components/NTPInstances";
 import NTPInstance from "./components/NTPInstance";
 import PermissionDetails from "./components/PermissionDetails";
+import NTPSubjects from "./components/NTPSubjects";
 
 if(typeof EluvioConfiguration === "undefined") {
   global.EluvioConfiguration = {};
@@ -114,12 +115,17 @@ class App extends React.Component {
 
             <Route exact path="/ntps" component={NTPInstances} />
             <Route exact path="/ntps/:ntpId" component={Titles} />
+
+            <Route exact path="/ntps/:ntpId/subjects" component={NTPSubjects} />
+            <Route exact path="/ntps/:ntpId/subjects/:subjectId" component={Titles} />
+            <Route exact path="/ntps/:ntpId/subjects/:subjectId/:objectId" component={PermissionDetails} />
+
             <Route exact path="/ntps/:ntpId/manage" component={NTPInstance} />
             <Route exact path="/ntps/:ntpId/:objectId" component={PermissionDetails} />
 
             <Route exact path="/titles" component={params => <Titles key="main-titles" {...params} />} />
             <Route exact path="/titles/:objectId" component={Title} />
-            <Route exact path="/titles/:objectId/:subjectId" component={PermissionDetails} />
+            <Route exact path="/titles/:objectId/:targetId" component={PermissionDetails} />
             <Route exact path="/titles/:objectId/permissions/profiles/:profile/assets" component={AssetPermissions} />
             <Route exact path="/titles/:objectId/permissions/profiles/:profile/offerings" component={OfferingPermissions} />
 

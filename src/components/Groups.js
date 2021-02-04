@@ -117,7 +117,13 @@ class Groups extends React.Component {
 
   render() {
     const groups = Object.values(this.props.rootStore.allGroups)
-      .filter(({name, description}) => !this.state.activeFilter || ((name || "").toLowerCase().includes(this.state.activeFilter.toLowerCase()) || (description || "").toLowerCase().includes(this.state.activeFilter.toLowerCase())))
+      .filter(({name, description}) =>
+        !this.state.activeFilter ||
+        (
+          (name || "").toLowerCase().includes(this.state.activeFilter.toLowerCase()) ||
+          (description || "").toLowerCase().includes(this.state.activeFilter.toLowerCase())
+        )
+      )
       .filter(({type}) => this.props.fabricOnly ? type === "fabricGroup" : true)
       .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1));
 
