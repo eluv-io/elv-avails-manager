@@ -12,7 +12,7 @@ class OfferingList extends React.Component {
     this.state = {
       filter: "",
       show: false,
-      sortKey: "offeringKey",
+      sortKey: "displayName",
       sortAsc: true,
       selected: []
     };
@@ -51,7 +51,7 @@ class OfferingList extends React.Component {
         className={`list-entry offerings-list-entry ${index % 2 === 0 ? "even" : "odd"} ${this.props.selectable ? "list-entry-selectable" : ""} ${this.props.withPermissions ? "offerings-list-entry-with-permissions" : ""} ${isSelected ? "selected" : ""}`}
         onClick={this.props.selectable ? () => this.SelectOffering(offering) : undefined}
       >
-        <div>{ offering.offeringKey }</div>
+        <div>{ offering.displayName }</div>
         <div title={offering.playoutFormats}><span>{ offering.playoutFormats }</span></div>
         { this.props.withPermissions ? <div>{offering.permission === "full-access" ? "Full Access" : "No Access"} </div> : null }
         { this.props.withPermissions ? <div>{offering.geoRestriction}</div> : null }
@@ -94,7 +94,7 @@ class OfferingList extends React.Component {
         { controls }
         <div className="list">
           <div className={`list-entry offerings-list-entry list-header offerings-list-header ${this.props.withPermissions ? "offerings-list-entry-with-permissions" : ""}`}>
-            { this.SortableHeader("offeringKey", "Offering") }
+            { this.SortableHeader("displayName", "Offering") }
             { this.SortableHeader("playoutFormats", "Playout Formats") }
             { this.props.withPermissions ? this.SortableHeader("permission", "Permission") : null }
             { this.props.withPermissions ? this.SortableHeader("geoRestriction", "Geo Restriction") : null }
@@ -104,9 +104,9 @@ class OfferingList extends React.Component {
 
           {
             offerings
-              .filter(({offeringKey, playoutFormats}) =>
+              .filter(({displayName, playoutFormats}) =>
                 !this.state.filter ||
-                ((offeringKey || "").toLowerCase().includes(this.state.filter.toLowerCase())
+                ((displayName || "").toLowerCase().includes(this.state.filter.toLowerCase())
                   || (playoutFormats || "").toLowerCase().includes(this.state.filter.toLowerCase()))
               )
               .map(this.OfferingEntry)

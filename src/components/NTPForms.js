@@ -19,6 +19,7 @@ class NTPForms extends React.Component {
       emails: "",
       count: 1,
       name: "",
+      ntpClass: 4,
       ntpId: "",
       objectId: "",
       groups: [],
@@ -67,6 +68,15 @@ class NTPForms extends React.Component {
   }
 
   CreateNTPInstanceForm() {
+    /*
+      <LabelledField label="NTP Class">
+        <select value={this.state.ntpClass} onChange={event => this.setState({ntpClass: parseInt(event.target.value)})}>
+          <option value={4}>Class 4</option>
+          <option value={5}>Class 5</option>
+        </select>
+      </LabelledField>
+    */
+
     return (
       <form
         className="ntp-instance-form ntp-instance-create-form"
@@ -78,6 +88,7 @@ class NTPForms extends React.Component {
 
             const ntpId = await this.props.rootStore.CreateNTPInstance({
               name: this.state.name,
+              ntpClass: this.state.ntpClass,
               ticketLength: this.state.ticketLength,
               maxTickets: this.state.maxTickets,
               maxRedemptions: this.state.maxRedemptions,

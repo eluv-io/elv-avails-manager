@@ -365,6 +365,7 @@ class RootStore {
       select: [
         "offerings",
         "assets",
+        "public/asset_metadata/offerings",
         "public/asset_metadata/title",
         "public/asset_metadata/display_title",
         "public/asset_metadata/sources",
@@ -379,6 +380,22 @@ class RootStore {
 
     if(!metadata.public) { metadata.public = {}; }
     if(!metadata.public.asset_metadata) { metadata.public.asset_metadata = {}; }
+
+    if(metadata.public.asset_metadata.offerings) {
+      try {
+        metadata.offerings = yield this.client.AvailableOfferings({
+          libraryId,
+          objectId,
+          linkPath: "public/asset_metadata/offerings",
+          directLink: true
+        });
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error(`Failed to retrieve available offerings from link for ${objectId}`);
+        // eslint-disable-next-line no-console
+        console.error(error);
+      }
+    }
 
     this.allTitles[objectId].displayTitle = displayTitle;
     this.allTitles[objectId].displayTitleWithStatus = displayTitleWithStatus;
@@ -401,6 +418,7 @@ class RootStore {
         const offering = metadata.offerings[offeringKey];
         return {
           offeringKey,
+          displayName: offering.display_name ? `${offering.display_name} (${offeringKey})` : offeringKey,
           playoutFormats: offering.playout ? Object.keys(offering.playout.playout_formats || {}).join(", ") : "",
           simpleWatermark: offering.simple_watermark,
           imageWatermark: offering.image_watermark
@@ -705,10 +723,11 @@ class RootStore {
   });
 
   @action.bound
-  CreateNTPInstance = flow(function * ({name, ticketLength, maxTickets, maxRedemptions, start, end, objectId, groupAddresses}) {
+  CreateNTPInstance = flow(function * ({name, ntpClass=4, ticketLength, maxTickets, maxRedemptions, start, end, objectId, groupAddresses}) {
     const ntpId = yield this.client.CreateNTPInstance({
       tenantId: this.tenantId,
       name,
+      ntpClass,
       objectId,
       groupAddresses,
       maxTickets,

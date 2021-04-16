@@ -38,6 +38,7 @@ class NTPInstance extends React.Component {
     return (
       <div className="title-view">
         <LabelledField label="Name" value={ntp.name} />
+        <LabelledField label="NTP Class" value={ntp.ntpClass} />
         <LabelledField label="NTP ID" value={ntp.ntpId} />
         <LabelledField label="Object ID" value={ntp.objectId} />
         <LabelledField label="Last Updated" value={FormatDate(ntp.updatedAt, true)} />
