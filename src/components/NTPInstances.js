@@ -82,7 +82,7 @@ class NTPInstances extends React.Component {
                       if(this.props.selectSubject) {
                         this.setState({selectedNTPInstance: ntpId});
                       } else {
-                        this.props.onSelect(ntpId, name);
+                        this.props.onSelect(ntpId, "ntpInstance", name);
                       }
                     }}
                   >

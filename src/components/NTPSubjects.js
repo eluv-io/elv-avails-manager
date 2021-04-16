@@ -83,7 +83,7 @@ class NTPSubjects extends React.Component {
                   <div
                     key={`ntp-subjects-${name}`}
                     className={`list-entry list-entry-selectable ntp-subject-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
-                    onClick={() => this.props.onSelect(address, "ntpSubject")}
+                    onClick={() => this.props.onSelect(address, "ntpSubject", name)}
                   >
                     { contents }
                   </div>
