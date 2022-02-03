@@ -25,6 +25,7 @@ class RootStore {
   @observable libraryId;
   @observable objectId;
   @observable versionHash;
+  @observable versionHashChanged = false;
   @observable writeToken;
 
   @observable initialized = false;
@@ -159,6 +160,11 @@ class RootStore {
   SetTimezone(zone) {
     Settings.defaultZoneName = zone;
     this.timezone = zone;
+  }
+
+  @action.bound
+  SetVersionHashChange = (value) => {
+    this.versionHashChanged = value;
   }
 
   FormatType(type) {

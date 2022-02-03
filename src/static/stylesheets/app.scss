@@ -105,10 +105,11 @@ header {
 .app-container {
   display: grid;
   grid-template-areas:
+  "nav warning"
   "nav header"
   "nav main";
   grid-template-columns: 10rem 1fr;
-  grid-template-rows: 3rem 1fr;
+  grid-template-rows: 2.5rem 3rem 1fr;
 
   .navigation-tabs {
     border: 0;
@@ -138,6 +139,13 @@ header {
 main {
   grid-area: main;
   padding: $elv-spacing-s;
+}
+
+.version-warning {
+  background-color: $elv-color-mediumred;
+  color: $elv-color-text-white;
+  grid-area: warning;
+  padding: $elv-spacing-xs $elv-spacing-s 0;
 }
 
 main,

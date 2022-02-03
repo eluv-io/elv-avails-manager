@@ -41,6 +41,28 @@ class App extends React.Component {
     };
 
     this.Content = this.Content.bind(this);
+    this.versionHashInterval = null;
+    this.saving = false;
+
+    this.PollVersionHash();
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.versionHashInterval);
+  }
+
+  PollVersionHash = () => {
+    if(this.saving) { return; }
+
+    this.versionHashInterval = setInterval(async () => {
+      const latestVersion = await this.props.rootStore.client.LatestVersionHash({objectId: this.props.rootStore.objectId});
+
+      if(latestVersion !== this.props.rootStore.versionHash) {
+        if(this.props.rootStore.versionHashChanged) { return; }
+
+        this.props.rootStore.SetVersionHashChange(true);
+      }
+    }, 60000);
   }
 
   Timezone() {
@@ -74,6 +96,11 @@ class App extends React.Component {
 
     return (
       <div className="app-container">
+        {
+          this.props.rootStore.versionHashChanged ?
+            <div className="version-warning">Warning: You are currently working on an outdated content object. Please
+          refresh the page to view the latest version.</div> : null
+        }
         <header>
           { headerMessage }
           { this.Timezone() }
@@ -86,10 +113,13 @@ class App extends React.Component {
                 onChange: commitMessage => this.setState({commitMessage})
               }],
               onConfirm: async () => {
+                this.saving = true;
                 await this.props.rootStore.Save(this.state.commitMessage);
                 this.setState({commitMessage: ""});
+                this.saving = false;
               }
             })}
+            disabled={this.props.rootStore.versionHashChanged}
           >
             Save
           </Action>
