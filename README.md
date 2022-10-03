@@ -41,12 +41,6 @@ action
 
 `action` will either be `display` or `manage`
 
-#### Pre-commit Hooks
-
-This project has git pre-commit hooks that will automatically lint and build the code whenever a git commit is made. To change or remove this feature, edit the `pre-commit` section of `package.json`, then remove and re-install `pre-commit`:
-
-`rm -rf node_modules/pre-commit ; npm install`
-
 #### Linting 
 
 `npm run lint`
