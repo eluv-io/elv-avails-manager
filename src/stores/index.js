@@ -1314,7 +1314,13 @@ class RootStore {
       20,
       Object.keys(authSpec),
       async titleId => {
-        await this.AddTitle({objectId: titleId, defaultProfiles: false, displayTitle: authSpec[titleId].display_title});
+        if(!titleId || !authSpec[titleId]) { return; }
+
+        await this.AddTitle({
+          objectId: titleId,
+          defaultProfiles: false,
+          displayTitle: authSpec[titleId].display_title
+        });
 
         runInAction(() => {
           // Options
