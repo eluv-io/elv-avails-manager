@@ -17,7 +17,7 @@
     "fix-scss": "./node_modules/sass-lint-auto-fix/dist/index.js"
   },
   "dependencies": {
-    "@eluvio/elv-client-js": "^4.0.2",
+    "@eluvio/elv-client-js": "^4.0.4",
     "buffer": "^5.6.0",
     "elv-components-js": "git+https://github.com/eluv-io/elv-components-js.git#e6abf54c2dd580a2564cba0deac1af18c350ee9e",
     "jsontokens": "^3.0.0",
