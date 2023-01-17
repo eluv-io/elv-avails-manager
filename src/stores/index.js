@@ -472,7 +472,7 @@ class RootStore {
           this.titleProfiles[objectId][profileName].offeringPermissions.map(offeringPermission => {
             return {
               displayName: profileName,
-              playoutFormats: titleOfferings[profileName].playout ? Object.keys(titleOfferings[profileName].playout.playout_formats || {}).join(", ") : "",
+              playoutFormats: (titleOfferings[profileName] && titleOfferings[profileName].playout) ? Object.keys(titleOfferings[profileName].playout.playout_formats || {}).join(", ") : "",
               ...(titleOfferings[offeringPermission.offeringKey] || {}),
               ...offeringPermission
             };
