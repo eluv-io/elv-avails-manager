@@ -470,10 +470,11 @@ class RootStore {
         const titleOfferings = this.allTitles[objectId].metadata.offerings || {};
         this.titleProfiles[objectId][profileName].offeringPermissions =
           this.titleProfiles[objectId][profileName].offeringPermissions.map(offeringPermission => {
+            const offeringData = titleOfferings[offeringPermission.offeringKey] || {};
             return {
               displayName: profileName,
-              playoutFormats: (titleOfferings[profileName] && titleOfferings[profileName].playout) ? Object.keys(titleOfferings[profileName].playout.playout_formats || {}).join(", ") : "",
-              ...(titleOfferings[offeringPermission.offeringKey] || {}),
+              playoutFormats: (offeringData.playout && offeringData.playout.playout_formats) ? Object.keys(offeringData.playout.playout_formats || {}).join(", ") : "",
+              ...offeringData,
               ...offeringPermission
             };
           });
