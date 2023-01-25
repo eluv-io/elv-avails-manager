@@ -78,7 +78,7 @@ class Titles extends React.Component {
   TargetPermissions() {
     const permissions = this.props.rootStore.targetTitlePermissions(this.Target().address)
       .sort((a, b) => a[this.state.sortKey] < b[this.state.sortKey] ? (this.state.sortAsc ? -1 : 1) : (this.state.sortAsc ? 1 : -1))
-      .filter(title => !this.state.activeFilter || title.displayTitleWithStatus.toLowerCase().includes(this.state.activeFilter));
+      .filter(title => !this.state.activeFilter || title.displayTitleWithStatus.toLowerCase().includes(this.state.activeFilter.toLowerCase()));
 
     return (
       <React.Fragment>
