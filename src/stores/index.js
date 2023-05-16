@@ -1544,7 +1544,7 @@ class RootStore {
               type: "group"
             };
           } else if(type === "oauthGroup") {
-            const groupInfo = this.allGroups[id];
+            const groupInfo = this.allGroups[id.trim()];
             if(!groupInfo) {
               this.LogError(`Unable to find OAuth group info for ${id}`);
             }
