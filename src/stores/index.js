@@ -468,12 +468,16 @@ class RootStore {
 
       if(this.titleProfiles[objectId][profileName].offerings === "custom") {
         const titleOfferings = this.allTitles[objectId].metadata.offerings || {};
-
         this.titleProfiles[objectId][profileName].offeringPermissions =
-          this.titleProfiles[objectId][profileName].offeringPermissions.map(offeringPermission => ({
-            ...(titleOfferings[offeringPermission.offeringKey] || {}),
-            ...offeringPermission
-          }));
+          this.titleProfiles[objectId][profileName].offeringPermissions.map(offeringPermission => {
+            const offeringData = titleOfferings[offeringPermission.offeringKey] || {};
+            return {
+              displayName: profileName,
+              playoutFormats: (offeringData.playout && offeringData.playout.playout_formats) ? Object.keys(offeringData.playout.playout_formats || {}).join(", ") : "",
+              ...offeringData,
+              ...offeringPermission
+            };
+          });
       }
     });
 
