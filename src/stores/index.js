@@ -4,12 +4,14 @@ import URI from "urijs";
 import {Buffer} from "buffer";
 import {Settings} from "luxon";
 import Trie from "trie-search";
+import {isEqual} from "lodash";
 
 import {FrameClient} from "@eluvio/elv-client-js/src/FrameClient";
 import ContentStore from "./Content";
 
 import AuthPolicyBody from "../static/auth_policy/AuthPolicy.yaml";
 import {JoinNTPSubject, SplitNTPSubject} from "../components/Misc";
+import UrlJoin from "url-join";
 const AUTH_POLICY_VERSION = "1.14";
 
 // Force strict mode so mutations are only allowed within actions.
@@ -1314,6 +1316,8 @@ class RootStore {
 
     delete authSpec.settings;
 
+    window.originalAuthSpec = authSpec;
+
     yield this.client.utils.LimitedMap(
       20,
       Object.keys(authSpec),
@@ -1598,6 +1602,10 @@ class RootStore {
         });
       });
 
+      const toUpdate = Object.keys(permissionSpec).filter(key =>
+        !isEqual(permissionSpec[key], (window.originalAuthSpec || {})[key])
+      );
+
       const writeToken = yield this.WriteToken();
 
       // Ensure policy is initialized
@@ -1611,13 +1619,29 @@ class RootStore {
         yield this.UpdatePolicy();
       }
 
-      yield this.client.ReplaceMetadata({
-        libraryId: this.libraryId,
-        objectId: this.objectId,
-        writeToken,
-        metadataSubtree: "auth_policy_spec",
-        metadata: permissionSpec
-      });
+      if(toUpdate.length < 1000) {
+        // Only update items that have changed
+        yield this.client.utils.LimitedMap(
+          10,
+          toUpdate,
+          async key => await this.client.ReplaceMetadata({
+            libraryId: this.libraryId,
+            objectId: this.objectId,
+            writeToken,
+            metadataSubtree: UrlJoin("auth_policy_spec", key),
+            metadata: permissionSpec[key]
+          })
+        );
+      } else {
+        // Many updates necessary, just replace entire spec
+        yield this.client.ReplaceMetadata({
+          libraryId: this.libraryId,
+          objectId: this.objectId,
+          writeToken,
+          metadataSubtree: "auth_policy_spec",
+          metadata: permissionSpec
+        });
+      }
 
       let fabricUsers = {};
       Object.values(this.allUsers)
