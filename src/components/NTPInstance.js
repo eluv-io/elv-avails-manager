@@ -90,7 +90,7 @@ class NTPInstance extends React.Component {
 
   render() {
     if(this.state.deleted) {
-      return <Redirect to={Path.dirname(this.props.location.pathname)} />;
+      return <Redirect to={Path.dirname(Path.dirname(this.props.location.pathname))} />;
     }
 
     const canIssueTickets = !this.NTP().maxTickets || this.NTP().maxTickets > this.NTP().issuedTickets;

@@ -142,7 +142,6 @@ class Groups extends React.Component {
                 Add OAuth Group
               </Action> : null
           }
-          { this.Filter("Filter Groups...") }
         </div>
 
         { this.PageControls(groups.length) }

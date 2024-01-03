@@ -92,6 +92,35 @@ class RootStore {
     return map;
   }
 
+  @action.bound
+  StartVersionPoll() {
+    this.LogDebug("Version poll started");
+    this.StopVersionPoll();
+
+    this.versionHashInterval = setInterval(async () => {
+      this.LogDebug("Polling version...");
+      const latestVersion = await this.client.LatestVersionHash({objectId: this.objectId});
+
+      this.LogDebug(this.versionHash, latestVersion);
+      if(!this.versionHashChanged && latestVersion !== this.versionHash) {
+        this.LogDebug("Version changed");
+        runInAction(() => this.versionHashChanged = true);
+      } else {
+        this.LogDebug("Version unchanged");
+      }
+    }, 60000);
+  }
+
+  @action.bound
+  StopVersionPoll() {
+    if(this.versionHashInterval) {
+      this.LogDebug("Version poll stopped");
+    }
+
+    clearInterval(this.versionHashInterval);
+    this.versionHashInterval = undefined;
+  }
+
   targetTitleIds(address) {
     return this.titlePermissionMap[address] || [];
   }
@@ -149,6 +178,11 @@ class RootStore {
         this.versionKey = this.versionKey + 1;
       });
     }, 500);
+  }
+
+  LogDebug(message) {
+    // eslint-disable-next-line no-console
+    console.debug("Eluvio Permissions Manager:", message);
   }
 
   LogError(message, error) {
@@ -845,7 +879,8 @@ class RootStore {
     return {tickets, failures};
   });
 
-  async SaveNTPInstances(infoOnly=false) {
+  @action.bound
+  SaveNTPInstances = flow(function * (infoOnly=false) {
     let ntpInstances = {};
     Object.keys(this.allNTPInstances || {})
       .forEach(ntpId => ntpInstances[ntpId] = {
@@ -857,21 +892,18 @@ class RootStore {
       return ntpInstances;
     }
 
-    await this.client.EditAndFinalizeContentObject({
+    const writeToken = yield this.WriteToken();
+
+    yield this.client.ReplaceMetadata({
       libraryId: this.libraryId,
       objectId: this.objectId,
-      commitMessage: "Save NTP Information (Permissions Manager)",
-      callback: async ({writeToken}) => {
-        await this.client.ReplaceMetadata({
-          libraryId: this.libraryId,
-          objectId: this.objectId,
-          writeToken,
-          metadataSubtree: "auth_policy_settings/ntp_instances",
-          metadata: ntpInstances
-        });
-      }
+      writeToken,
+      metadataSubtree: "auth_policy_settings/ntp_instances",
+      metadata: ntpInstances
     });
-  }
+
+    yield this.Finalize("Save NTP Information (Permissions Manager)");
+  });
 
   // Page/Sort/Filter users and groups
 
@@ -1004,9 +1036,9 @@ class RootStore {
       throw Error("Missing query parameter 'libraryId'");
     } else if(!this.objectId) {
       throw Error("Missing query parameter 'objectId'");
-    } else if(!this.versionHash) {
-      throw Error("Missing query parameter 'versionHash'");
     }
+
+    this.versionHash = yield this.client.LatestVersionHash({objectId: this.objectId});
 
     const oktaParameters = yield this.client.ContentObjectMetadata({
       libraryId: this.libraryId,
@@ -1039,6 +1071,8 @@ class RootStore {
     }
 
     yield this.Load();
+
+    this.StartVersionPoll();
   });
 
   @action.bound
@@ -1219,6 +1253,8 @@ class RootStore {
       throw Error("Write token not created");
     }
 
+    this.StopVersionPoll();
+
     const {hash} = yield this.client.FinalizeContentObject({
       libraryId: this.libraryId,
       objectId: this.objectId,
@@ -1228,6 +1264,8 @@ class RootStore {
 
     this.versionHash = hash;
     this.writeToken = undefined;
+
+    this.StartVersionPoll();
   });
 
   @action.bound
