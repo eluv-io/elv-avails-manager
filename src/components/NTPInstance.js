@@ -66,17 +66,19 @@ class NTPInstance extends React.Component {
         <div className="list">
           <div className="list-entry list-header ntp-tickets-list-entry">
             { this.SortableHeader("token", "Ticket") }
+            { this.SortableHeader("email", "Email") }
             { this.SortableHeader("user_id", "Subject ID") }
             { this.SortableHeader("issued_at", "Issued") }
           </div>
           {
-            this.Paged(tickets).map(({token, user_id, issued_at}, i) => {
+            this.Paged(tickets).map(({token, user_id, email, issued_at}, i) => {
               return (
                 <div
                   key={`ntp-tickets-${token}`}
                   className={`list-entry ntp-tickets-list-entry ${i % 2 === 0 ? "even" : "odd"}`}
                 >
                   <div title={token}>{ token }</div>
+                  <div title={email}>{ email }</div>
                   <div title={user_id}>{ user_id }</div>
                   <div title={FormatDate(issued_at)}>{ FormatDate(issued_at) }</div>
                 </div>

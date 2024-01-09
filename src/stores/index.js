@@ -848,6 +848,7 @@ class RootStore {
           tickets.push({
             token,
             user_id,
+            email,
             issued_at: Date.now()
           });
         } catch (error) {
