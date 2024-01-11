@@ -46,23 +46,30 @@ class Title extends React.Component {
     return this.props.rootStore.allTitles[this.props.match.params.objectId];
   }
 
-  Preview() {
-    if(!this.Title().metadata.public.asset_metadata.sources) {
-      return null;
-    }
+  Actions() {
+    const title = this.Title();
 
-    const toggleButton = (
-      <Action
-        onClick={() => this.setState({showPreview: !this.state.showPreview})}
-      >
-        { this.state.showPreview ? "Hide Preview" : "Show Preview" }
-      </Action>
-    );
+    let previewButton;
+    if(title.metadata.public.asset_metadata.sources) {
+      previewButton = (
+        <Action
+          onClick={() => this.setState({showPreview: !this.state.showPreview})}
+        >
+          {this.state.showPreview ? "Hide Preview" : "Show Preview"}
+        </Action>
+      );
+    }
 
     return (
       <div className="title-preview">
         <div className="controls">
-          { toggleButton }
+          { previewButton }
+          <Action
+            className="secondary"
+            onClick={() => this.props.rootStore.OpenObjectLink({libraryId: title.libraryId, objectId: title.objectId, versionHash: title.versionHash})}
+          >
+            Open in Fabric Browser
+          </Action>
         </div>
 
         {
@@ -91,7 +98,7 @@ class Title extends React.Component {
         <LabelledField label="Display Title" value={assetMetadata.display_title} />
         <LabelledField label="Status" value={title.status} />
         <LabelledField label="Synopsis" value={(assetMetadata.info || {}).synopsis || assetMetadata.synopsis} />
-        { this.Preview() }
+        { this.Actions() }
       </div>
     );
   }

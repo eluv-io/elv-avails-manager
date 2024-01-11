@@ -1709,6 +1709,19 @@ class RootStore {
       this.SetError("Failed to save: " + error.message || error);
     }
   });
+
+  @action.bound
+  OpenObjectLink({libraryId, objectId, versionHash}) {
+    this.client.SendMessage({
+      options: {
+        operation: "OpenLink",
+        libraryId,
+        objectId,
+        versionHash
+      },
+      noResponse: true
+    });
+  }
 }
 
 export const rootStore = new RootStore();
