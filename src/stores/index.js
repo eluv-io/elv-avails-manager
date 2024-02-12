@@ -1292,30 +1292,35 @@ class RootStore {
     const oauthSyncHash = yield this.client.ContentObjectMetadata({...params, metadataSubtree: "oauth_settings"});
 
     if(oauthSyncHash) {
-      let oauthSync = (yield this.client.DownloadPart({...params, partHash: oauthSyncHash, format: "text"}));
-      oauthSync = JSON.parse(Buffer.from(oauthSync));
+      let oauthSync;
+      try {
+        oauthSync = (yield this.client.DownloadPart({...params, partHash: oauthSyncHash, format: "text"}));
+        oauthSync = JSON.parse(Buffer.from(oauthSync));
 
-      // Convert from old format
-      if(Array.isArray(oauthSync.users)) {
-        let users = {};
-        oauthSync.users.map(user => {
-          users[user.address] = user;
-        });
+        // Convert from old format
+        if(Array.isArray(oauthSync.users)) {
+          let users = {};
+          oauthSync.users.map(user => {
+            users[user.address] = user;
+          });
 
-        oauthSync.users = users;
+          oauthSync.users = users;
+        }
+
+        if(Array.isArray(oauthSync.groups)) {
+          let groups = {};
+          oauthSync.groups.map(group => {
+            groups[group.address] = group;
+          });
+
+          oauthSync.groups = groups;
+        }
+
+        this.oauthUsers = oauthSync.users;
+        this.oauthGroups = oauthSync.groups;
+      } catch(error) {
+        console.log("Unable to download part", error);
       }
-
-      if(Array.isArray(oauthSync.groups)) {
-        let groups = {};
-        oauthSync.groups.map(group => {
-          groups[group.address] = group;
-        });
-
-        oauthSync.groups = groups;
-      }
-
-      this.oauthUsers = oauthSync.users;
-      this.oauthGroups = oauthSync.groups;
     }
 
     const settings = yield this.client.ContentObjectMetadata({...params, metadataSubtree: "auth_policy_settings"});
