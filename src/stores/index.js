@@ -488,8 +488,13 @@ class RootStore {
       objectId
     });
 
-    const permission = yield this.client.Permission({objectId});
-    this.allTitles[objectId].permission = this.client.permissionLevels[permission].short;
+    try {
+      const permission = yield this.client.Permission({objectId});
+
+      this.allTitles[objectId].permission = this.client.permissionLevels[permission].short;
+    } catch(error) {
+      console.error(`Unable to load permission for ${objectId}`);
+    }
 
     Object.keys(this.titleProfiles[objectId] || {}).map(profileName => {
       if(this.titleProfiles[objectId][profileName].assets === "custom") {
