@@ -320,25 +320,35 @@ class RootStore {
   }
 
   async DisplayTitle({objectId}) {
-    const metadata = (await this.client.ContentObjectMetadata({
-      libraryId: await this.client.ContentObjectLibraryId({objectId}),
-      objectId,
-      select: [
-        "public/name",
-        "public/asset_metadata/info/status"
-      ]
-    })) || {};
+    try {
+      const metadata = (await this.client.ContentObjectMetadata({
+        libraryId: await this.client.ContentObjectLibraryId({objectId}),
+        objectId,
+        select: [
+          "public/name",
+          "public/asset_metadata/info/status"
+        ]
+      })) || {};
 
 
-    const displayTitle = this.SafeTraverse(metadata, "public/name");
-    let displayTitleWithStatus = displayTitle;
+      const displayTitle = this.SafeTraverse(metadata, "public/name");
+      let displayTitleWithStatus = displayTitle;
 
-    const status = this.SafeTraverse(metadata, "public/asset_metadata/info/status");
-    if(status) {
-      displayTitleWithStatus = `${displayTitle} (${status})`;
+      const status = this.SafeTraverse(metadata, "public/asset_metadata/info/status");
+      if(status) {
+        displayTitleWithStatus = `${displayTitle} (${status})`;
+      }
+
+      return { displayTitle, displayTitleWithStatus, status };
+    } catch(error) {
+      console.error(`Unable to load display title for ${objectId}`);
+
+      return {
+        displayTitle: "",
+        displayTitleWithStatus: "",
+        status: ""
+      };
     }
-
-    return { displayTitle, displayTitleWithStatus, status };
   }
 
   @action.bound
