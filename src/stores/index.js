@@ -1153,7 +1153,17 @@ class RootStore {
         throw Error(response);
       }
 
-      results = [...results, ...JSON.parse(atob(response.body))];
+      let decodedResults;
+      const base64Regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+      const isB64 = base64Regex.test(response.body);
+
+      if(isB64) {
+        decodedResults = atob(response.body);
+      } else {
+        decodedResults = response.body;
+      }
+
+      results = [...results, ...JSON.parse(decodedResults)];
     } while(startCursor);
 
     return results;
@@ -1210,12 +1220,16 @@ class RootStore {
       });
 
       if(existingPart) {
-        yield this.client.DeletePart({
-          libraryId: this.libraryId,
-          objectId: this.objectId,
-          writeToken,
-          partHash: existingPart
-        });
+        try {
+          yield this.client.DeletePart({
+            libraryId: this.libraryId,
+            objectId: this.objectId,
+            writeToken,
+            partHash: existingPart
+          });
+        } catch(error) {
+          this.LogError("Unable to delete existing part", error);
+        }
       }
 
       yield this.Finalize("OAuth sync");
