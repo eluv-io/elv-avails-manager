@@ -84,20 +84,29 @@ class Title extends React.Component {
     );
   }
 
+  // Stringify metadata objects/links so React can render them
+  FieldValue(value) {
+    if(value && typeof value === "object") {
+      return JSON.stringify(value, null, 2);
+    }
+
+    return value;
+  }
+
   TitleView() {
     const title = this.Title();
     const assetMetadata = title.metadata.public.asset_metadata || {info: {}};
 
     return (
       <div className="title-view">
-        <LabelledField label="Library ID" value={title.libraryId} />
-        <LabelledField label="Object ID" value={title.objectId} />
-        <LabelledField label="Permissions" value={title.permission} />
-        <LabelledField label="IP Title ID" value={assetMetadata.ip_title_id} />
-        <LabelledField label="Title" value={assetMetadata.title} />
-        <LabelledField label="Display Title" value={assetMetadata.display_title} />
-        <LabelledField label="Status" value={title.status} />
-        <LabelledField label="Synopsis" value={(assetMetadata.info || {}).synopsis || assetMetadata.synopsis} />
+        <LabelledField label="Library ID" value={this.FieldValue(title.libraryId)} />
+        <LabelledField label="Object ID" value={this.FieldValue(title.objectId)} />
+        <LabelledField label="Permissions" value={this.FieldValue(title.permission)} />
+        <LabelledField label="IP Title ID" value={this.FieldValue(assetMetadata.ip_title_id)} />
+        <LabelledField label="Title" value={this.FieldValue(assetMetadata.title)} />
+        <LabelledField label="Display Title" value={this.FieldValue(assetMetadata.display_title)} />
+        <LabelledField label="Status" value={this.FieldValue(title.status)} />
+        <LabelledField label="Synopsis" value={this.FieldValue((assetMetadata.info || {}).synopsis || assetMetadata.synopsis)} />
         { this.Actions() }
       </div>
     );
