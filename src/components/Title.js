@@ -84,13 +84,9 @@ class Title extends React.Component {
     );
   }
 
-  // Stringify metadata objects/links so React can render them
+  // An object here is an unresolved metadata link, meaning the target is empty - show nothing
   FieldValue(value) {
-    if(value && typeof value === "object") {
-      return JSON.stringify(value, null, 2);
-    }
-
-    return value;
+    return value && typeof value === "object" ? "" : value;
   }
 
   TitleView() {
